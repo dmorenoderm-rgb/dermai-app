@@ -1,10 +1,9 @@
 import streamlit as st
 import re
 import json
+import pandas as pd
 from datetime import datetime
 from io import BytesIO
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
 
 # -----------------------
 # CONFIGURACIÓN UI
@@ -36,11 +35,16 @@ credentials = {
     "Farmacia": "123"
 }
 
+auth = True
+
 if role in credentials:
     password = st.sidebar.text_input("Contraseña", type="password")
     if password != credentials[role]:
         st.warning("Acceso restringido")
-        st.stop()
+        auth = False
+
+if not auth:
+    st.stop()
 
 # -----------------------
 # PERSISTENCIA
@@ -60,6 +64,12 @@ def save_data(data):
 
 if "requests" not in st.session_state:
     st.session_state.requests = load_data()
+
+# -----------------------
+# CONTROL RESET FORMULARIO
+# -----------------------
+if "reset_form" not in st.session_state:
+    st.session_state.reset_form = False
 
 # -----------------------
 # SOLICITANTES
@@ -180,20 +190,31 @@ if role == "Dermatólogo":
 
     st.subheader("Nueva solicitud")
 
-    paciente = st.text_input("Paciente (AN + 10 dígitos)")
+    col_btn = st.columns([1,6])
+    if col_btn[0].button("Nueva solicitud"):
+        st.session_state.reset_form = True
+
+    if st.session_state.reset_form:
+        st.session_state.paciente = ""
+        st.session_state.reset_form = False
+
+    paciente = st.text_input("Paciente (AN + 10 dígitos)", key="paciente")
     solicitante = st.selectbox("Solicitante", solicitantes)
     enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()))
 
     st.write(protocolos[enfermedad]["texto"])
 
-    tratamiento = st.selectbox("Tratamiento", protocolos[enfermedad]["drugs"])
+    tratamiento = st.selectbox(
+        "Tratamiento",
+        protocolos[enfermedad]["drugs"]
+    )
 
     if st.button("Enviar solicitud"):
 
         if not re.match(r"^AN\d{10}$", paciente):
             st.error("Formato incorrecto")
         else:
-            nueva = {
+            new = {
                 "Paciente": paciente,
                 "Solicitante": solicitante,
                 "Enfermedad": enfermedad,
@@ -205,34 +226,31 @@ if role == "Dermatólogo":
                 "Fecha Farmacia": "",
             }
 
-            st.session_state.requests.insert(0, nueva)
+            st.session_state.requests.insert(0, new)
             save_data(st.session_state.requests)
 
+            st.session_state.paciente = ""
             st.success("Solicitud creada")
-            st.rerun()
 
 # -----------------------
-# EXCEL
+# EXPORTAR EXCEL
 # -----------------------
-import pandas as pd
-from io import BytesIO
+st.subheader("Solicitudes")
 
-def generar_excel(data):
-    df = pd.DataFrame(data)
+df = pd.DataFrame(st.session_state.requests)
 
-    buffer = BytesIO()
-    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+def to_excel(df):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False)
+    return output.getvalue()
 
-    buffer.seek(0)
-    return buffer
-
-if st.session_state.requests:
-    excel = generar_excel(st.session_state.requests)
+if not df.empty:
+    excel_data = to_excel(df)
 
     st.download_button(
         label="Descargar Excel",
-        data=excel,
+        data=excel_data,
         file_name="solicitudes_dermai.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
@@ -240,8 +258,6 @@ if st.session_state.requests:
 # -----------------------
 # TABLA
 # -----------------------
-st.subheader("Solicitudes")
-
 for i, r in enumerate(st.session_state.requests):
 
     col1, col2, col3, col4, col5, col6 = st.columns([2,2,3,2,2,3])
@@ -264,34 +280,34 @@ for i, r in enumerate(st.session_state.requests):
         if r["Estado Director"] == "No validado" or r["Estado Farmacia"] == "No validado":
             st.write("Solicitar a Comisión Derma-Farmacia")
 
+    # -----------------------
     # DIRECTOR
+    # -----------------------
     if role == "Director de Derma" and r["Estado Director"] == "Pendiente":
 
         if st.button(f"Validar {i}"):
             r["Estado Director"] = "Validado"
             r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
-            st.rerun()
 
         if st.button(f"No validar {i}"):
             r["Estado Director"] = "No validado"
             r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
-            st.rerun()
 
+    # -----------------------
     # FARMACIA
+    # -----------------------
     if role == "Farmacia" and r["Estado Director"] == "Validado":
 
         if st.button(f"Pendiente dispensación {i}"):
             r["Estado Farmacia"] = "Pendiente de dispensación"
             r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
-            st.rerun()
 
         if st.button(f"No validar farmacia {i}"):
             r["Estado Farmacia"] = "No validado"
             r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
-            st.rerun()
 
     st.divider()
