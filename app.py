@@ -1,17 +1,19 @@
 import streamlit as st
 import re
 import json
+import pandas as pd
 from datetime import datetime
+from io import BytesIO
 
 # -----------------------
-# CONFIG UI
+# CONFIGURACIÓN UI
 # -----------------------
 st.set_page_config(layout="wide")
 
 st.markdown(
     """
     <style>
-    html, body, [class*="css"]  {
+    html, body, [class*="css"] {
         font-family: Arial !important;
     }
     </style>
@@ -43,6 +45,31 @@ if role in credentials:
 
 if not auth:
     st.stop()
+
+# -----------------------
+# PERSISTENCIA
+# -----------------------
+FILE = "data.json"
+
+def load_data():
+    try:
+        with open(FILE, "r") as f:
+            return json.load(f)
+    except:
+        return []
+
+def save_data(data):
+    with open(FILE, "w") as f:
+        json.dump(data, f)
+
+if "requests" not in st.session_state:
+    st.session_state.requests = load_data()
+
+# -----------------------
+# CONTROL RESET FORMULARIO
+# -----------------------
+if "reset_form" not in st.session_state:
+    st.session_state.reset_form = False
 
 # -----------------------
 # SOLICITANTES
@@ -157,37 +184,21 @@ protocolos = {
 }
 
 # -----------------------
-# PERSISTENCIA
-# -----------------------
-FILE = "data.json"
-
-def load_data():
-    try:
-        with open(FILE, "r") as f:
-            return json.load(f)
-    except:
-        return []
-
-def save_data(data):
-    with open(FILE, "w") as f:
-        json.dump(data, f)
-
-if "requests" not in st.session_state:
-    st.session_state.requests = load_data()
-
-# -----------------------
-# RESET FORM
-# -----------------------
-if "reset_form" not in st.session_state:
-    st.session_state.reset_form = False
-    
-# -----------------------
 # FORMULARIO
 # -----------------------
 if role == "Dermatólogo":
+
     st.subheader("Nueva solicitud")
 
-    paciente = st.text_input("Paciente (AN + 10 dígitos)")
+    col_btn = st.columns([1,6])
+    if col_btn[0].button("Nueva solicitud"):
+        st.session_state.reset_form = True
+
+    if st.session_state.reset_form:
+        st.session_state.paciente = ""
+        st.session_state.reset_form = False
+
+    paciente = st.text_input("Paciente (AN + 10 dígitos)", key="paciente")
     solicitante = st.selectbox("Solicitante", solicitantes)
     enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()))
 
@@ -199,6 +210,7 @@ if role == "Dermatólogo":
     )
 
     if st.button("Enviar solicitud"):
+
         if not re.match(r"^AN\d{10}$", paciente):
             st.error("Formato incorrecto")
         else:
@@ -213,8 +225,11 @@ if role == "Dermatólogo":
                 "Fecha Director": "",
                 "Fecha Farmacia": "",
             }
+
             st.session_state.requests.insert(0, new)
             save_data(st.session_state.requests)
+
+            st.session_state.paciente = ""
             st.success("Solicitud creada")
 
 # -----------------------
@@ -224,57 +239,49 @@ st.subheader("Solicitudes")
 
 df = pd.DataFrame(st.session_state.requests)
 
+def to_excel(df):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False)
+    return output.getvalue()
+
 if not df.empty:
-    excel = df.to_excel(index=False)
+    excel_data = to_excel(df)
 
     st.download_button(
-        "Descargar Excel",
-        data=excel,
+        label="Descargar Excel",
+        data=excel_data,
         file_name="solicitudes_dermai.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    
+
 # -----------------------
 # TABLA
 # -----------------------
-st.subheader("Solicitudes")
-
 for i, r in enumerate(st.session_state.requests):
 
     col1, col2, col3, col4, col5, col6 = st.columns([2,2,3,2,2,3])
 
-    # -----------------------
-    # DATOS PRINCIPALES
-    # -----------------------
     col1.write(r["Paciente"])
     col2.write(r["Enfermedad"])
     col3.write(r["Tratamiento"])
 
-    # -----------------------
-    # DIRECTOR + FECHA
-    # -----------------------
     with col4:
         st.write(r["Estado Director"])
         if r["Fecha Director"]:
             st.caption(r["Fecha Director"])
 
-    # -----------------------
-    # FARMACIA + FECHA
-    # -----------------------
     with col5:
         st.write(r["Estado Farmacia"] or "-")
         if r["Fecha Farmacia"]:
             st.caption(r["Fecha Farmacia"])
 
-    # -----------------------
-    # MENSAJE DERECHA
-    # -----------------------
     with col6:
         if r["Estado Director"] == "No validado" or r["Estado Farmacia"] == "No validado":
             st.write("Solicitar a Comisión Derma-Farmacia")
 
     # -----------------------
-    # ACCIONES
+    # DIRECTOR
     # -----------------------
     if role == "Director de Derma" and r["Estado Director"] == "Pendiente":
 
@@ -288,6 +295,9 @@ for i, r in enumerate(st.session_state.requests):
             r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
 
+    # -----------------------
+    # FARMACIA
+    # -----------------------
     if role == "Farmacia" and r["Estado Director"] == "Validado":
 
         if st.button(f"Pendiente dispensación {i}"):
