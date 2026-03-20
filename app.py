@@ -1,12 +1,13 @@
 import streamlit as st
 import re
 import json
-import pandas as pd
 from datetime import datetime
 from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 # -----------------------
-# CONFIGURACIÓN UI
+# CONFIG UI
 # -----------------------
 st.set_page_config(layout="wide")
 
@@ -66,12 +67,6 @@ if "requests" not in st.session_state:
     st.session_state.requests = load_data()
 
 # -----------------------
-# CONTROL RESET FORMULARIO
-# -----------------------
-if "reset_form" not in st.session_state:
-    st.session_state.reset_form = False
-
-# -----------------------
 # SOLICITANTES
 # -----------------------
 solicitantes = [
@@ -82,7 +77,7 @@ solicitantes = [
 ]
 
 # -----------------------
-# PROTOCOLOS COMPLETOS
+# PROTOCOLOS
 # -----------------------
 protocolos = {
 
@@ -190,82 +185,74 @@ if role == "Dermatólogo":
 
     st.subheader("Nueva solicitud")
 
-    # Inicialización valores vacíos
-    if "paciente" not in st.session_state:
-        st.session_state.paciente = ""
-
-    paciente = st.text_input("Paciente (AN + 10 dígitos)", key="paciente")
-
-    solicitante = st.selectbox(
-        "Solicitante",
-        solicitantes,
-        key="solicitante"
-    )
-
-    enfermedad = st.selectbox(
-        "Enfermedad",
-        list(protocolos.keys()),
-        key="enfermedad"
-    )
+    paciente = st.text_input("Paciente (AN + 10 dígitos)")
+    solicitante = st.selectbox("Solicitante", solicitantes)
+    enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()))
 
     st.write(protocolos[enfermedad]["texto"])
 
-    tratamiento = st.selectbox(
-        "Tratamiento",
-        protocolos[enfermedad]["drugs"],
-        key="tratamiento"
-    )
+    tratamiento = st.selectbox("Tratamiento", protocolos[enfermedad]["drugs"])
 
     if st.button("Enviar solicitud"):
 
-    if not re.match(r"^AN\d{10}$", paciente):
-        st.error("Formato incorrecto")
-    else:
-        new = {
-            "Paciente": paciente,
-            "Solicitante": solicitante,
-            "Enfermedad": enfermedad,
-            "Tratamiento": tratamiento,
-            "Estado Director": "Pendiente",
-            "Estado Farmacia": "",
-            "Fecha solicitud": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "Fecha Director": "",
-            "Fecha Farmacia": "",
-        }
+        if not re.match(r"^AN\d{10}$", paciente):
+            st.error("Formato incorrecto")
+        else:
+            nueva = {
+                "Paciente": paciente,
+                "Solicitante": solicitante,
+                "Enfermedad": enfermedad,
+                "Tratamiento": tratamiento,
+                "Estado Director": "Pendiente",
+                "Estado Farmacia": "",
+                "Fecha solicitud": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "Fecha Director": "",
+                "Fecha Farmacia": "",
+            }
 
-        st.session_state.requests.insert(0, new)
-        save_data(st.session_state.requests)
+            st.session_state.requests.insert(0, nueva)
+            save_data(st.session_state.requests)
 
-        st.success("Solicitud creada")
-
-        st.rerun()
+            st.success("Solicitud creada")
+            st.rerun()
 
 # -----------------------
-# EXPORTAR EXCEL
+# PDF
 # -----------------------
-st.subheader("Solicitudes")
+def generar_pdf(data):
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
 
-df = pd.DataFrame(st.session_state.requests)
+    y = 750
 
-def to_excel(df):
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False)
-    return output.getvalue()
+    for r in data:
+        texto = f"{r['Paciente']} | {r['Enfermedad']} | {r['Tratamiento']} | {r['Estado Director']} | {r['Estado Farmacia']}"
+        c.drawString(30, y, texto)
+        y -= 20
 
-if not df.empty:
-    excel_data = to_excel(df)
+        if y < 50:
+            c.showPage()
+            y = 750
+
+    c.save()
+    buffer.seek(0)
+    return buffer
+
+if st.session_state.requests:
+    pdf = generar_pdf(st.session_state.requests)
 
     st.download_button(
-        label="Descargar Excel",
-        data=excel_data,
-        file_name="solicitudes_dermai.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        label="Descargar PDF",
+        data=pdf,
+        file_name="solicitudes_dermai.pdf",
+        mime="application/pdf"
     )
 
 # -----------------------
 # TABLA
 # -----------------------
+st.subheader("Solicitudes")
+
 for i, r in enumerate(st.session_state.requests):
 
     col1, col2, col3, col4, col5, col6 = st.columns([2,2,3,2,2,3])
@@ -288,34 +275,34 @@ for i, r in enumerate(st.session_state.requests):
         if r["Estado Director"] == "No validado" or r["Estado Farmacia"] == "No validado":
             st.write("Solicitar a Comisión Derma-Farmacia")
 
-    # -----------------------
     # DIRECTOR
-    # -----------------------
     if role == "Director de Derma" and r["Estado Director"] == "Pendiente":
 
         if st.button(f"Validar {i}"):
             r["Estado Director"] = "Validado"
             r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
+            st.rerun()
 
         if st.button(f"No validar {i}"):
             r["Estado Director"] = "No validado"
             r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
+            st.rerun()
 
-    # -----------------------
     # FARMACIA
-    # -----------------------
     if role == "Farmacia" and r["Estado Director"] == "Validado":
 
         if st.button(f"Pendiente dispensación {i}"):
             r["Estado Farmacia"] = "Pendiente de dispensación"
             r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
+            st.rerun()
 
         if st.button(f"No validar farmacia {i}"):
             r["Estado Farmacia"] = "No validado"
             r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
+            st.rerun()
 
     st.divider()
