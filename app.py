@@ -212,35 +212,29 @@ if role == "Dermatólogo":
             st.rerun()
 
 # -----------------------
-# PDF
+# EXCEL
 # -----------------------
-def generar_pdf(data):
+import pandas as pd
+from io import BytesIO
+
+def generar_excel(data):
+    df = pd.DataFrame(data)
+
     buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=letter)
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False)
 
-    y = 750
-
-    for r in data:
-        texto = f"{r['Paciente']} | {r['Enfermedad']} | {r['Tratamiento']} | {r['Estado Director']} | {r['Estado Farmacia']}"
-        c.drawString(30, y, texto)
-        y -= 20
-
-        if y < 50:
-            c.showPage()
-            y = 750
-
-    c.save()
     buffer.seek(0)
     return buffer
 
 if st.session_state.requests:
-    pdf = generar_pdf(st.session_state.requests)
+    excel = generar_excel(st.session_state.requests)
 
     st.download_button(
-        label="Descargar PDF",
-        data=pdf,
-        file_name="solicitudes_dermai.pdf",
-        mime="application/pdf"
+        label="Descargar Excel",
+        data=excel,
+        file_name="solicitudes_dermai.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
 # -----------------------
