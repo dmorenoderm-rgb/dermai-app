@@ -240,8 +240,6 @@ if role == "Dermatólogo":
             st.success("Solicitud creada")
 st.rerun()
 
-            st.success("Solicitud creada")
-
 # -----------------------
 # EXPORTAR EXCEL
 # -----------------------
