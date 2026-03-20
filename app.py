@@ -218,27 +218,27 @@ if role == "Dermatólogo":
 
     if st.button("Enviar solicitud"):
 
-        if not re.match(r"^AN\d{10}$", paciente):
-            st.error("Formato incorrecto")
-        else:
-            new = {
-                "Paciente": paciente,
-                "Solicitante": solicitante,
-                "Enfermedad": enfermedad,
-                "Tratamiento": tratamiento,
-                "Estado Director": "Pendiente",
-                "Estado Farmacia": "",
-                "Fecha solicitud": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                "Fecha Director": "",
-                "Fecha Farmacia": "",
-            }
+    if not re.match(r"^AN\d{10}$", paciente):
+        st.error("Formato incorrecto")
+    else:
+        new = {
+            "Paciente": paciente,
+            "Solicitante": solicitante,
+            "Enfermedad": enfermedad,
+            "Tratamiento": tratamiento,
+            "Estado Director": "Pendiente",
+            "Estado Farmacia": "",
+            "Fecha solicitud": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "Fecha Director": "",
+            "Fecha Farmacia": "",
+        }
 
-            st.session_state.requests.insert(0, new)
-            save_data(st.session_state.requests)
+        st.session_state.requests.insert(0, new)
+        save_data(st.session_state.requests)
 
-            # 🔥 RESET LIMPIO
-            st.success("Solicitud creada")
-st.rerun()
+        st.success("Solicitud creada")
+
+        st.rerun()
 
 # -----------------------
 # EXPORTAR EXCEL
