@@ -1,13 +1,18 @@
 import streamlit as st
 import re
+import json
+from datetime import datetime
 
 st.set_page_config(layout="wide")
-st.title("🧴 DerMAI – Gestión de tratamientos dermatológicos")
+st.title("🧴 DerMAI – Gestión de tratamientos")
 
 # -----------------------
 # ROLES
 # -----------------------
-rol = st.sidebar.selectbox("Rol", ["Dermatólogo", "Director", "Farmacia"])
+rol = st.sidebar.selectbox(
+    "Rol",
+    ["Dermatólogo", "Director de Derma", "Farmacia"]
+)
 
 # -----------------------
 # SOLICITANTES
@@ -20,25 +25,15 @@ solicitantes = [
 ]
 
 # -----------------------
-# PROTOCOLOS COMPLETOS
+# PROTOCOLOS
 # -----------------------
 protocolos = {
     "Psoriasis en placas": {
         "texto": "1º Adalimumab → 2º Ustekinumab → 3º Tildrakizumab → 4º Bimekizumab",
         "drugs": [
             "Adalimumab 40 mg/2 semanas",
-            "Etanercept 50 mg semanal",
-            "Infliximab 5 mg/kg cada 8 semanas",
-            "Certolizumab 200 mg/2 semanas",
-            "Certolizumab 400 mg/4 semanas",
             "Ustekinumab 45 mg/12 semanas",
             "Ustekinumab 90 mg/12 semanas",
-            "Secukinumab 300 mg/4 semanas",
-            "Ixekizumab 80 mg/4 semanas",
-            "Brodalumab 210 mg/2 semanas",
-            "Guselkumab 100 mg/8 semanas",
-            "Risankizumab 150 mg/12 semanas",
-            "Tildrakizumab 100 mg/12 semanas",
             "Bimekizumab 320 mg/8 semanas",
         ],
     },
@@ -46,67 +41,30 @@ protocolos = {
         "texto": "1º Dupilumab → 2º Tralokinumab → 3º JAK",
         "drugs": [
             "Dupilumab 300 mg/2 semanas",
-            "Tralokinumab 300 mg/2 semanas",
-            "Tralokinumab 300 mg/4 semanas",
-            "Lebrikizumab 250 mg/2 semanas",
-            "Lebrikizumab 250 mg/4 semanas",
             "Upadacitinib 15 mg",
             "Upadacitinib 30 mg",
-            "Baricitinib 2 mg",
-            "Baricitinib 4 mg",
-            "Abrocitinib 100 mg",
-            "Abrocitinib 200 mg",
         ],
-    },
-    "Hidradenitis supurativa": {
-        "texto": "Adalimumab primera línea",
-        "drugs": [
-            "Adalimumab semanal",
-            "Secukinumab 300 mg/4 semanas",
-            "Bimekizumab 320 mg/4 semanas",
-        ],
-    },
-    "Urticaria crónica espontánea": {
-        "texto": "Omalizumab",
-        "drugs": ["Omalizumab 300 mg/4 semanas"],
-    },
-    "Alopecia areata": {
-        "texto": "JAK",
-        "drugs": [
-            "Baricitinib 2 mg",
-            "Baricitinib 4 mg",
-            "Ritlecitinib 50 mg",
-        ],
-    },
-    "Vitíligo": {
-        "texto": "Ruxolitinib tópico",
-        "drugs": ["Ruxolitinib crema 1,5%"],
-    },
-    "Melanoma": {
-        "texto": "Inmunoterapia / BRAF",
-        "drugs": [
-            "Nivolumab",
-            "Pembrolizumab",
-            "Ipilimumab",
-            "Dabrafenib + trametinib",
-            "Encorafenib + binimetinib",
-        ],
-    },
-    "Carcinoma basocelular": {
-        "texto": "Hedgehog",
-        "drugs": ["Vismodegib", "Sonidegib"],
-    },
-    "Carcinoma escamoso cutáneo": {
-        "texto": "Anti-PD1",
-        "drugs": ["Cemiplimab", "Pembrolizumab"],
     },
 }
 
 # -----------------------
-# BASE DE DATOS (memoria)
+# PERSISTENCIA (JSON)
 # -----------------------
+FILE = "data.json"
+
+def load_data():
+    try:
+        with open(FILE, "r") as f:
+            return json.load(f)
+    except:
+        return []
+
+def save_data(data):
+    with open(FILE, "w") as f:
+        json.dump(data, f)
+
 if "requests" not in st.session_state:
-    st.session_state.requests = []
+    st.session_state.requests = load_data()
 
 # -----------------------
 # FORMULARIO
@@ -125,56 +83,75 @@ if rol == "Dermatólogo":
         protocolos[enfermedad]["drugs"]
     )
 
-    if st.button("Enviar solicitud"):
+    if st.button("Enviar"):
         if not re.match(r"^AN\d{10}$", paciente):
-            st.error("Formato incorrecto: AN + 10 dígitos")
+            st.error("Formato incorrecto")
         else:
-            st.session_state.requests.insert(0, {
+            new = {
                 "Paciente": paciente,
                 "Solicitante": solicitante,
                 "Enfermedad": enfermedad,
                 "Tratamiento": tratamiento,
-                "Director": "",
-                "Farmacia": "",
-            })
-            st.success("Solicitud registrada")
+                "Estado Director": "Pendiente",
+                "Estado Farmacia": "",
+                "Fecha solicitud": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "Fecha Director": "",
+                "Fecha Farmacia": "",
+            }
+            st.session_state.requests.insert(0, new)
+            save_data(st.session_state.requests)
+            st.success("Solicitud creada")
 
 # -----------------------
 # HISTÓRICO
 # -----------------------
-st.subheader("📊 Histórico")
+st.subheader("📊 Solicitudes")
 
 for i, r in enumerate(st.session_state.requests):
-    col1, col2, col3, col4, col5 = st.columns([2,2,2,2,3])
+
+    col1, col2, col3, col4, col5, col6 = st.columns([2,2,2,2,2,2])
 
     col1.write(r["Paciente"])
     col2.write(r["Enfermedad"])
     col3.write(r["Tratamiento"])
-    col4.write(r["Director"] or "-")
-    col5.write(r["Farmacia"] or "-")
+    col4.write(r["Estado Director"])
+    col5.write(r["Estado Farmacia"])
+    col6.write(r["Fecha solicitud"])
 
     # -----------------------
     # DIRECTOR
     # -----------------------
-    if rol == "Director" and not r["Director"]:
+    if rol == "Director de Derma" and r["Estado Director"] == "Pendiente":
+
         if st.button(f"✔ Validar {i}"):
-            r["Director"] = "Validado"
-        if st.button(f"✖ Rechazar {i}"):
-            r["Director"] = "No validado"
+            r["Estado Director"] = "Validado"
+            r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+            save_data(st.session_state.requests)
+
+        if st.button(f"✖ No validar {i}"):
+            r["Estado Director"] = "No validado"
+            r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+            save_data(st.session_state.requests)
 
     # -----------------------
     # FARMACIA
     # -----------------------
-    if rol == "Farmacia" and r["Director"] == "Validado":
-        if st.button(f"📅 Citar {i}"):
-            r["Farmacia"] = "Citado"
-        if st.button(f"❌ RechazarF {i}"):
-            r["Farmacia"] = "No validado"
+    if rol == "Farmacia" and r["Estado Director"] == "Validado":
+
+        if st.button(f"📦 Pendiente disp {i}"):
+            r["Estado Farmacia"] = "Pendiente de dispensación"
+            r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+            save_data(st.session_state.requests)
+
+        if st.button(f"❌ No validar F {i}"):
+            r["Estado Farmacia"] = "No validado"
+            r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+            save_data(st.session_state.requests)
 
     # -----------------------
     # ALERTA
     # -----------------------
-    if r["Director"] == "No validado" or r["Farmacia"] == "No validado":
+    if r["Estado Director"] == "No validado" or r["Estado Farmacia"] == "No validado":
         st.warning("Solicitar a Comisión Derma-Farmacia")
 
     st.divider()
