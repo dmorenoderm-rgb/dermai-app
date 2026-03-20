@@ -237,12 +237,8 @@ if role == "Dermatólogo":
             save_data(st.session_state.requests)
 
             # 🔥 RESET LIMPIO
-            st.session_state.paciente = ""
-            st.session_state.solicitante = solicitantes[0]
-            st.session_state.enfermedad = list(protocolos.keys())[0]
-            st.session_state.tratamiento = protocolos[
-                list(protocolos.keys())[0]
-            ]["drugs"][0]
+            st.success("Solicitud creada")
+st.rerun()
 
             st.success("Solicitud creada")
 
