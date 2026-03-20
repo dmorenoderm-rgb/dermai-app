@@ -176,6 +176,12 @@ if "requests" not in st.session_state:
     st.session_state.requests = load_data()
 
 # -----------------------
+# RESET FORM
+# -----------------------
+if "reset_form" not in st.session_state:
+    st.session_state.reset_form = False
+    
+# -----------------------
 # FORMULARIO
 # -----------------------
 if role == "Dermatólogo":
@@ -211,6 +217,23 @@ if role == "Dermatólogo":
             save_data(st.session_state.requests)
             st.success("Solicitud creada")
 
+# -----------------------
+# EXPORTAR EXCEL
+# -----------------------
+st.subheader("Solicitudes")
+
+df = pd.DataFrame(st.session_state.requests)
+
+if not df.empty:
+    excel = df.to_excel(index=False)
+
+    st.download_button(
+        "Descargar Excel",
+        data=excel,
+        file_name="solicitudes_dermai.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    
 # -----------------------
 # TABLA
 # -----------------------
