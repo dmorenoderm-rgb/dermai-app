@@ -190,23 +190,30 @@ if role == "Dermatólogo":
 
     st.subheader("Nueva solicitud")
 
-    col_btn = st.columns([1,6])
-    if col_btn[0].button("Nueva solicitud"):
-        st.session_state.reset_form = True
-
-    if st.session_state.reset_form:
+    # Inicialización valores vacíos
+    if "paciente" not in st.session_state:
         st.session_state.paciente = ""
-        st.session_state.reset_form = False
 
     paciente = st.text_input("Paciente (AN + 10 dígitos)", key="paciente")
-    solicitante = st.selectbox("Solicitante", solicitantes)
-    enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()))
+
+    solicitante = st.selectbox(
+        "Solicitante",
+        solicitantes,
+        key="solicitante"
+    )
+
+    enfermedad = st.selectbox(
+        "Enfermedad",
+        list(protocolos.keys()),
+        key="enfermedad"
+    )
 
     st.write(protocolos[enfermedad]["texto"])
 
     tratamiento = st.selectbox(
         "Tratamiento",
-        protocolos[enfermedad]["drugs"]
+        protocolos[enfermedad]["drugs"],
+        key="tratamiento"
     )
 
     if st.button("Enviar solicitud"):
@@ -229,7 +236,14 @@ if role == "Dermatólogo":
             st.session_state.requests.insert(0, new)
             save_data(st.session_state.requests)
 
+            # 🔥 RESET LIMPIO
             st.session_state.paciente = ""
+            st.session_state.solicitante = solicitantes[0]
+            st.session_state.enfermedad = list(protocolos.keys())[0]
+            st.session_state.tratamiento = protocolos[
+                list(protocolos.keys())[0]
+            ]["drugs"][0]
+
             st.success("Solicitud creada")
 
 # -----------------------
