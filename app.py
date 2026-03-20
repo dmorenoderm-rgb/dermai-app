@@ -218,18 +218,40 @@ st.subheader("Solicitudes")
 
 for i, r in enumerate(st.session_state.requests):
 
-    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+    col1, col2, col3, col4, col5, col6 = st.columns([2,2,3,2,2,3])
 
+    # -----------------------
+    # DATOS PRINCIPALES
+    # -----------------------
     col1.write(r["Paciente"])
     col2.write(r["Enfermedad"])
     col3.write(r["Tratamiento"])
-    col4.write(r["Estado Director"])
-    col5.write(r["Estado Farmacia"])
-    col6.write(r["Fecha solicitud"])
-    col7.write(r["Fecha Director"] or r["Fecha Farmacia"] or "-")
 
     # -----------------------
-    # DIRECTOR
+    # DIRECTOR + FECHA
+    # -----------------------
+    with col4:
+        st.write(r["Estado Director"])
+        if r["Fecha Director"]:
+            st.caption(r["Fecha Director"])
+
+    # -----------------------
+    # FARMACIA + FECHA
+    # -----------------------
+    with col5:
+        st.write(r["Estado Farmacia"] or "-")
+        if r["Fecha Farmacia"]:
+            st.caption(r["Fecha Farmacia"])
+
+    # -----------------------
+    # MENSAJE DERECHA
+    # -----------------------
+    with col6:
+        if r["Estado Director"] == "No validado" or r["Estado Farmacia"] == "No validado":
+            st.write("Solicitar a Comisión Derma-Farmacia")
+
+    # -----------------------
+    # ACCIONES
     # -----------------------
     if role == "Director de Derma" and r["Estado Director"] == "Pendiente":
 
@@ -243,9 +265,6 @@ for i, r in enumerate(st.session_state.requests):
             r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
 
-    # -----------------------
-    # FARMACIA
-    # -----------------------
     if role == "Farmacia" and r["Estado Director"] == "Validado":
 
         if st.button(f"Pendiente dispensación {i}"):
@@ -257,11 +276,5 @@ for i, r in enumerate(st.session_state.requests):
             r["Estado Farmacia"] = "No validado"
             r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
-
-    # -----------------------
-    # ALERTA
-    # -----------------------
-    if r["Estado Director"] == "No validado" or r["Estado Farmacia"] == "No validado":
-        st.write("Solicitar a Comisión Derma-Farmacia")
 
     st.divider()
