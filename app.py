@@ -20,6 +20,7 @@ st.markdown(
 )
 
 st.title("DerMAI")
+st.write("Gestión de Medicamentos de Alto Impacto en Dermatología HUVM")
 
 # -----------------------
 # LOGIN
@@ -54,24 +55,103 @@ solicitantes = [
 ]
 
 # -----------------------
-# PROTOCOLOS
+# PROTOCOLOS COMPLETOS
 # -----------------------
 protocolos = {
+
     "Psoriasis en placas": {
         "texto": "1º Adalimumab → 2º Ustekinumab → 3º Tildrakizumab → 4º Bimekizumab",
         "drugs": [
             "Adalimumab 40 mg/2 semanas",
+            "Etanercept 50 mg semanal",
+            "Infliximab 5 mg/kg cada 8 semanas",
+            "Certolizumab 200 mg/2 semanas",
+            "Certolizumab 400 mg/4 semanas",
             "Ustekinumab 45 mg/12 semanas",
             "Ustekinumab 90 mg/12 semanas",
+            "Secukinumab 300 mg/4 semanas",
+            "Ixekizumab 80 mg/4 semanas",
+            "Brodalumab 210 mg/2 semanas",
+            "Guselkumab 100 mg/8 semanas",
+            "Risankizumab 150 mg/12 semanas",
+            "Tildrakizumab 100 mg/12 semanas",
             "Bimekizumab 320 mg/8 semanas",
         ],
     },
+
     "Dermatitis atópica": {
         "texto": "1º Dupilumab → 2º Tralokinumab → 3º JAK",
         "drugs": [
             "Dupilumab 300 mg/2 semanas",
+            "Tralokinumab 300 mg/2 semanas",
+            "Tralokinumab 300 mg/4 semanas",
+            "Lebrikizumab 250 mg/2 semanas",
+            "Lebrikizumab 250 mg/4 semanas",
             "Upadacitinib 15 mg",
             "Upadacitinib 30 mg",
+            "Baricitinib 2 mg",
+            "Baricitinib 4 mg",
+            "Abrocitinib 100 mg",
+            "Abrocitinib 200 mg",
+        ],
+    },
+
+    "Hidradenitis supurativa": {
+        "texto": "Adalimumab primera línea",
+        "drugs": [
+            "Adalimumab semanal",
+            "Secukinumab 300 mg/4 semanas",
+            "Bimekizumab 320 mg/4 semanas",
+        ],
+    },
+
+    "Urticaria crónica espontánea": {
+        "texto": "Omalizumab",
+        "drugs": ["Omalizumab 300 mg/4 semanas"],
+    },
+
+    "Alopecia areata": {
+        "texto": "JAK",
+        "drugs": [
+            "Baricitinib 2 mg",
+            "Baricitinib 4 mg",
+            "Ritlecitinib 50 mg",
+        ],
+    },
+
+    "Vitíligo": {
+        "texto": "Ruxolitinib tópico",
+        "drugs": ["Ruxolitinib crema 1,5%"],
+    },
+
+    "Melanoma": {
+        "texto": "Inmunoterapia / terapias dirigidas",
+        "drugs": [
+            "Nivolumab 240 mg/2 semanas",
+            "Nivolumab 480 mg/4 semanas",
+            "Pembrolizumab 200 mg/3 semanas",
+            "Pembrolizumab 400 mg/6 semanas",
+            "Ipilimumab 3 mg/kg",
+            "Dabrafenib + trametinib",
+            "Encorafenib + binimetinib",
+            "Vemurafenib + cobimetinib",
+        ],
+    },
+
+    "Carcinoma basocelular": {
+        "texto": "Hedgehog",
+        "drugs": [
+            "Vismodegib 150 mg diario",
+            "Sonidegib 200 mg diario",
+        ],
+    },
+
+    "Carcinoma escamoso cutáneo": {
+        "texto": "Anti-PD1",
+        "drugs": [
+            "Cemiplimab 350 mg/3 semanas",
+            "Pembrolizumab 200 mg/3 semanas",
+            "Pembrolizumab 400 mg/6 semanas",
         ],
     },
 }
@@ -138,13 +218,15 @@ st.subheader("Solicitudes")
 
 for i, r in enumerate(st.session_state.requests):
 
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 
     col1.write(r["Paciente"])
     col2.write(r["Enfermedad"])
     col3.write(r["Tratamiento"])
     col4.write(r["Estado Director"])
     col5.write(r["Estado Farmacia"])
+    col6.write(r["Fecha solicitud"])
+    col7.write(r["Fecha Director"] or r["Fecha Farmacia"] or "-")
 
     # -----------------------
     # DIRECTOR
