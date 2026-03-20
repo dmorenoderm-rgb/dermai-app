@@ -3,16 +3,45 @@ import re
 import json
 from datetime import datetime
 
+# -----------------------
+# CONFIG UI
+# -----------------------
 st.set_page_config(layout="wide")
-st.title("🧴 DerMAI – Gestión de tratamientos")
+
+st.markdown(
+    """
+    <style>
+    html, body, [class*="css"]  {
+        font-family: Arial !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+st.title("DerMAI")
 
 # -----------------------
-# ROLES
+# LOGIN
 # -----------------------
-rol = st.sidebar.selectbox(
-    "Rol",
-    ["Dermatólogo", "Director de Derma", "Farmacia"]
-)
+roles = ["Dermatólogo", "Director de Derma", "Farmacia"]
+role = st.sidebar.selectbox("Acceso", roles)
+
+credentials = {
+    "Director de Derma": "123",
+    "Farmacia": "123"
+}
+
+auth = True
+
+if role in credentials:
+    password = st.sidebar.text_input("Contraseña", type="password")
+    if password != credentials[role]:
+        st.warning("Acceso restringido")
+        auth = False
+
+if not auth:
+    st.stop()
 
 # -----------------------
 # SOLICITANTES
@@ -48,7 +77,7 @@ protocolos = {
 }
 
 # -----------------------
-# PERSISTENCIA (JSON)
+# PERSISTENCIA
 # -----------------------
 FILE = "data.json"
 
@@ -69,21 +98,21 @@ if "requests" not in st.session_state:
 # -----------------------
 # FORMULARIO
 # -----------------------
-if rol == "Dermatólogo":
-    st.subheader("📝 Nueva solicitud")
+if role == "Dermatólogo":
+    st.subheader("Nueva solicitud")
 
     paciente = st.text_input("Paciente (AN + 10 dígitos)")
     solicitante = st.selectbox("Solicitante", solicitantes)
     enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()))
 
-    st.info(protocolos[enfermedad]["texto"])
+    st.write(protocolos[enfermedad]["texto"])
 
     tratamiento = st.selectbox(
         "Tratamiento",
         protocolos[enfermedad]["drugs"]
     )
 
-    if st.button("Enviar"):
+    if st.button("Enviar solicitud"):
         if not re.match(r"^AN\d{10}$", paciente):
             st.error("Formato incorrecto")
         else:
@@ -103,32 +132,31 @@ if rol == "Dermatólogo":
             st.success("Solicitud creada")
 
 # -----------------------
-# HISTÓRICO
+# TABLA
 # -----------------------
-st.subheader("📊 Solicitudes")
+st.subheader("Solicitudes")
 
 for i, r in enumerate(st.session_state.requests):
 
-    col1, col2, col3, col4, col5, col6 = st.columns([2,2,2,2,2,2])
+    col1, col2, col3, col4, col5 = st.columns(5)
 
     col1.write(r["Paciente"])
     col2.write(r["Enfermedad"])
     col3.write(r["Tratamiento"])
     col4.write(r["Estado Director"])
     col5.write(r["Estado Farmacia"])
-    col6.write(r["Fecha solicitud"])
 
     # -----------------------
     # DIRECTOR
     # -----------------------
-    if rol == "Director de Derma" and r["Estado Director"] == "Pendiente":
+    if role == "Director de Derma" and r["Estado Director"] == "Pendiente":
 
-        if st.button(f"✔ Validar {i}"):
+        if st.button(f"Validar {i}"):
             r["Estado Director"] = "Validado"
             r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
 
-        if st.button(f"✖ No validar {i}"):
+        if st.button(f"No validar {i}"):
             r["Estado Director"] = "No validado"
             r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
@@ -136,14 +164,14 @@ for i, r in enumerate(st.session_state.requests):
     # -----------------------
     # FARMACIA
     # -----------------------
-    if rol == "Farmacia" and r["Estado Director"] == "Validado":
+    if role == "Farmacia" and r["Estado Director"] == "Validado":
 
-        if st.button(f"📦 Pendiente disp {i}"):
+        if st.button(f"Pendiente dispensación {i}"):
             r["Estado Farmacia"] = "Pendiente de dispensación"
             r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
 
-        if st.button(f"❌ No validar F {i}"):
+        if st.button(f"No validar farmacia {i}"):
             r["Estado Farmacia"] = "No validado"
             r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
@@ -152,6 +180,6 @@ for i, r in enumerate(st.session_state.requests):
     # ALERTA
     # -----------------------
     if r["Estado Director"] == "No validado" or r["Estado Farmacia"] == "No validado":
-        st.warning("Solicitar a Comisión Derma-Farmacia")
+        st.write("Solicitar a Comisión Derma-Farmacia")
 
     st.divider()
