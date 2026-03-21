@@ -4,6 +4,9 @@ import json
 from datetime import datetime
 import pandas as pd
 
+# -----------------------
+# CONFIGURACIÓN
+# -----------------------
 st.set_page_config(layout="wide")
 
 st.title("DerMAI")
@@ -65,42 +68,95 @@ protocolos = {
             "Guselkumab 100 mg/8 semanas",
             "Risankizumab 150 mg/12 semanas",
             "Tildrakizumab 100 mg/12 semanas",
-            "Bimekizumab 320 mg/8 semanas"
-        ]
+            "Bimekizumab 320 mg/8 semanas",
+        ],
     },
     "Dermatitis atópica": {
         "texto": "1º Dupilumab → 2º Tralokinumab → 3º JAK",
         "drugs": [
             "Dupilumab 300 mg/2 semanas",
             "Tralokinumab 300 mg/2 semanas",
+            "Tralokinumab 300 mg/4 semanas",
+            "Lebrikizumab 250 mg/2 semanas",
+            "Lebrikizumab 250 mg/4 semanas",
             "Upadacitinib 15 mg",
-            "Upadacitinib 30 mg"
-        ]
-    }
+            "Upadacitinib 30 mg",
+            "Baricitinib 2 mg",
+            "Baricitinib 4 mg",
+            "Abrocitinib 100 mg",
+            "Abrocitinib 200 mg",
+        ],
+    },
+    "Hidradenitis supurativa": {
+        "texto": "Adalimumab primera línea",
+        "drugs": [
+            "Adalimumab semanal",
+            "Secukinumab 300 mg/4 semanas",
+            "Bimekizumab 320 mg/4 semanas",
+        ],
+    },
+    "Urticaria crónica espontánea": {
+        "texto": "Omalizumab",
+        "drugs": ["Omalizumab 300 mg/4 semanas"],
+    },
+    "Alopecia areata": {
+        "texto": "JAK",
+        "drugs": [
+            "Baricitinib 2 mg",
+            "Baricitinib 4 mg",
+            "Ritlecitinib 50 mg",
+        ],
+    },
+    "Vitíligo": {
+        "texto": "Ruxolitinib tópico",
+        "drugs": ["Ruxolitinib crema 1,5%"],
+    },
+    "Melanoma": {
+        "texto": "Inmunoterapia",
+        "drugs": [
+            "Nivolumab 240 mg/2 semanas",
+            "Nivolumab 480 mg/4 semanas",
+            "Pembrolizumab 200 mg/3 semanas",
+            "Pembrolizumab 400 mg/6 semanas",
+        ],
+    },
+    "Carcinoma basocelular": {
+        "texto": "Hedgehog",
+        "drugs": [
+            "Vismodegib 150 mg diario",
+            "Sonidegib 200 mg diario",
+        ],
+    },
+    "Carcinoma escamoso cutáneo": {
+        "texto": "Anti-PD1",
+        "drugs": [
+            "Cemiplimab 350 mg/3 semanas",
+            "Pembrolizumab 200 mg/3 semanas",
+            "Pembrolizumab 400 mg/6 semanas",
+        ],
+    },
 }
 
 # -----------------------
-# FORMULARIO (IMPORTANTE: enfermedad FUERA)
+# FORMULARIO
 # -----------------------
-
 if role == "Dermatólogo":
 
     st.subheader("Nueva solicitud")
-
-    # 🔥 fuera del form → esto hace que funcione bien
-    enfermedad = st.selectbox("Enfermedad", ["Seleccionar"] + list(protocolos.keys()))
-
-    lista_tratamientos = ["Seleccionar"]
-
-    if enfermedad != "Seleccionar":
-        st.info(protocolos[enfermedad]["texto"])
-        lista_tratamientos = ["Seleccionar"] + protocolos[enfermedad]["drugs"]
 
     with st.form("formulario"):
 
         paciente = st.text_input("Paciente (AN + 10 dígitos)", value="AN")
 
         solicitante = st.selectbox("Solicitante", ["Seleccionar"] + solicitantes)
+
+        enfermedad = st.selectbox("Enfermedad", ["Seleccionar"] + list(protocolos.keys()))
+
+        lista_tratamientos = ["Seleccionar"]
+
+        if enfermedad != "Seleccionar":
+            st.info(protocolos[enfermedad]["texto"])
+            lista_tratamientos = ["Seleccionar"] + protocolos[enfermedad]["drugs"]
 
         tratamiento = st.selectbox("Tratamiento", lista_tratamientos)
 
@@ -120,7 +176,7 @@ if role == "Dermatólogo":
                 st.error("Debe seleccionar un tratamiento")
 
             elif not re.fullmatch(r"AN\d{10}", paciente):
-                st.error("Formato incorrecto: AN + 10 dígitos")
+                st.error("Formato AN + 10 dígitos")
 
             else:
                 nueva = {
@@ -132,7 +188,7 @@ if role == "Dermatólogo":
                     "Estado Farmacia": "",
                     "Fecha solicitud": datetime.now().strftime("%d/%m/%Y %H:%M"),
                     "Fecha Director": "",
-                    "Fecha Farmacia": ""
+                    "Fecha Farmacia": "",
                 }
 
                 st.session_state.requests.insert(0, nueva)
@@ -143,13 +199,7 @@ if role == "Dermatólogo":
 # -----------------------
 # TABLA
 # -----------------------
-
 st.subheader("Solicitudes")
 
-for i, r in enumerate(st.session_state.requests):
-
-    col1, col2, col3 = st.columns(3)
-
-    col1.write(r["Paciente"])
-    col2.write(r["Enfermedad"])
-    col3.write(r["Tratamiento"])
+for r in st.session_state.requests:
+    st.write(r)
