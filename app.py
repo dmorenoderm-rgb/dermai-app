@@ -167,15 +167,7 @@ if role == "Dermatólogo":
     with st.form("formulario", clear_on_submit=True):
 
         # PACIENTE
-        col1, col2 = st.columns([1, 4])
-
-        with col1:
-            st.write("AN")
-
-        with col2:
-            paciente_num = st.text_input("Número paciente (10 dígitos)")
-
-        paciente = "AN" + paciente_num
+        paciente_input = st.text_input("Paciente", placeholder="AN1234567890")
 
         # SOLICITANTE
         solicitante = st.selectbox(
@@ -193,14 +185,13 @@ if role == "Dermatólogo":
         if enfermedad != "Seleccionar":
             st.info(protocolos[enfermedad]["texto"])
 
-        # TRATAMIENTO
+        # TRATAMIENTO (FIX CLAVE)
         if enfermedad == "Seleccionar":
-            tratamiento = st.selectbox("Tratamiento", ["Seleccionar"])
+            lista_tratamientos = ["Seleccionar"]
         else:
-            tratamiento = st.selectbox(
-                "Tratamiento",
-                ["Seleccionar"] + protocolos[enfermedad]["drugs"]
-            )
+            lista_tratamientos = ["Seleccionar"] + protocolos[enfermedad]["drugs"]
+
+        tratamiento = st.selectbox("Tratamiento", lista_tratamientos)
 
         # BOTÓN
         submitted = st.form_submit_button("Enviar solicitud")
@@ -208,15 +199,15 @@ if role == "Dermatólogo":
         # VALIDACIÓN
         if submitted:
 
-            if not re.match(r"^\d{10}$", paciente_num):
-                st.error("Debe introducir 10 dígitos")
+            if not re.match(r"^AN\d{10}$", paciente_input):
+                st.error("Formato: AN + 10 dígitos")
 
             elif solicitante == "Seleccionar" or enfermedad == "Seleccionar" or tratamiento == "Seleccionar":
                 st.error("Debe completar todos los campos")
 
             else:
                 nueva = {
-                    "Paciente": paciente,
+                    "Paciente": paciente_input,
                     "Solicitante": solicitante,
                     "Enfermedad": enfermedad,
                     "Tratamiento": tratamiento,
