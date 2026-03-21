@@ -51,9 +51,10 @@ solicitantes = [
 ]
 
 # -----------------------
-# PROTOCOLOS
+# PROTOCOLOS COMPLETOS
 # -----------------------
 protocolos = {
+
     "Psoriasis en placas": {
         "texto": "1º Adalimumab → 2º Ustekinumab → 3º Tildrakizumab → 4º Bimekizumab",
         "drugs": [
@@ -68,6 +69,7 @@ protocolos = {
             "Bimekizumab 320 mg/8 semanas",
         ],
     },
+
     "Dermatitis atópica": {
         "texto": "1º Dupilumab → 2º Tralokinumab → 3º JAK",
         "drugs": [
@@ -82,6 +84,65 @@ protocolos = {
             "Baricitinib 4 mg",
             "Abrocitinib 100 mg",
             "Abrocitinib 200 mg",
+        ],
+    },
+
+    "Hidradenitis supurativa": {
+        "texto": "Adalimumab primera línea",
+        "drugs": [
+            "Adalimumab semanal",
+            "Secukinumab 300 mg/4 semanas",
+            "Bimekizumab 320 mg/4 semanas",
+        ],
+    },
+
+    "Urticaria crónica espontánea": {
+        "texto": "Omalizumab",
+        "drugs": [
+            "Omalizumab 300 mg/4 semanas",
+        ],
+    },
+
+    "Alopecia areata": {
+        "texto": "JAK",
+        "drugs": [
+            "Baricitinib 2 mg",
+            "Baricitinib 4 mg",
+            "Ritlecitinib 50 mg",
+        ],
+    },
+
+    "Vitíligo": {
+        "texto": "Ruxolitinib tópico",
+        "drugs": [
+            "Ruxolitinib crema 1,5%",
+        ],
+    },
+
+    "Melanoma": {
+        "texto": "Inmunoterapia",
+        "drugs": [
+            "Nivolumab 240 mg/2 semanas",
+            "Nivolumab 480 mg/4 semanas",
+            "Pembrolizumab 200 mg/3 semanas",
+            "Pembrolizumab 400 mg/6 semanas",
+        ],
+    },
+
+    "Carcinoma basocelular": {
+        "texto": "Hedgehog",
+        "drugs": [
+            "Vismodegib 150 mg diario",
+            "Sonidegib 200 mg diario",
+        ],
+    },
+
+    "Carcinoma escamoso cutáneo": {
+        "texto": "Anti-PD1",
+        "drugs": [
+            "Cemiplimab 350 mg/3 semanas",
+            "Pembrolizumab 200 mg/3 semanas",
+            "Pembrolizumab 400 mg/6 semanas",
         ],
     },
 }
@@ -172,7 +233,6 @@ f_estado_dir = colf1.selectbox("Estado Director", ["Todos","Pendiente","Validado
 f_estado_far = colf2.selectbox("Estado Farmacia", ["Todos","","Pendiente de dispensación","No validado"])
 f_enfermedad = colf3.selectbox("Enfermedad", ["Todas"] + list(protocolos.keys()))
 
-# aplicar filtros
 filtered = st.session_state.requests
 
 if f_estado_dir != "Todos":
@@ -189,11 +249,5 @@ if f_enfermedad != "Todas":
 # -----------------------
 st.subheader("Solicitudes")
 
-for i, r in enumerate(filtered):
-
-    col1, col2, col3, col4 = st.columns([2,2,3,3])
-
-    col1.write(r["Paciente"])
-    col2.write(r["Enfermedad"])
-    col3.write(r["Tratamiento"])
-    col4.write(r["Estado Director"] + " / " + (r["Estado Farmacia"] or "-"))
+for r in filtered:
+    st.write(r)
