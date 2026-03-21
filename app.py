@@ -174,7 +174,7 @@ tratamiento = st.selectbox(
 )
 submitted = st.form_submit_button("Enviar solicitud")
 
-        if submitted:
+if submitted:
 
             paciente = paciente.strip().upper()
 
