@@ -4,12 +4,9 @@ import json
 from datetime import datetime
 import pandas as pd
 
-# -----------------------
-# CONFIGURACIÓN
-# -----------------------
 st.set_page_config(layout="wide")
 
-st.title("DerMAI")
+st.title("DerMAI PRO")
 st.write("Gestión de Medicamentos de Alto Impacto en Dermatología HUVM")
 
 # -----------------------
@@ -87,55 +84,23 @@ protocolos = {
             "Abrocitinib 200 mg",
         ],
     },
-    "Hidradenitis supurativa": {
-        "texto": "Adalimumab primera línea",
-        "drugs": [
-            "Adalimumab semanal",
-            "Secukinumab 300 mg/4 semanas",
-            "Bimekizumab 320 mg/4 semanas",
-        ],
-    },
-    "Urticaria crónica espontánea": {
-        "texto": "Omalizumab",
-        "drugs": ["Omalizumab 300 mg/4 semanas"],
-    },
-    "Alopecia areata": {
-        "texto": "JAK",
-        "drugs": [
-            "Baricitinib 2 mg",
-            "Baricitinib 4 mg",
-            "Ritlecitinib 50 mg",
-        ],
-    },
-    "Vitíligo": {
-        "texto": "Ruxolitinib tópico",
-        "drugs": ["Ruxolitinib crema 1,5%"],
-    },
-    "Melanoma": {
-        "texto": "Inmunoterapia",
-        "drugs": [
-            "Nivolumab 240 mg/2 semanas",
-            "Nivolumab 480 mg/4 semanas",
-            "Pembrolizumab 200 mg/3 semanas",
-            "Pembrolizumab 400 mg/6 semanas",
-        ],
-    },
-    "Carcinoma basocelular": {
-        "texto": "Hedgehog",
-        "drugs": [
-            "Vismodegib 150 mg diario",
-            "Sonidegib 200 mg diario",
-        ],
-    },
-    "Carcinoma escamoso cutáneo": {
-        "texto": "Anti-PD1",
-        "drugs": [
-            "Cemiplimab 350 mg/3 semanas",
-            "Pembrolizumab 200 mg/3 semanas",
-            "Pembrolizumab 400 mg/6 semanas",
-        ],
-    },
 }
+
+# -----------------------
+# DASHBOARD
+# -----------------------
+st.subheader("Panel de control")
+
+total = len(st.session_state.requests)
+pendientes = sum(1 for r in st.session_state.requests if r["Estado Director"] == "Pendiente")
+validados = sum(1 for r in st.session_state.requests if r["Estado Director"] == "Validado")
+rechazados = sum(1 for r in st.session_state.requests if r["Estado Director"] == "No validado")
+
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Total", total)
+c2.metric("Pendientes", pendientes)
+c3.metric("Validados", validados)
+c4.metric("Rechazados", rechazados)
 
 # -----------------------
 # FORMULARIO
@@ -176,7 +141,7 @@ if role == "Dermatólogo":
                 st.error("Debe seleccionar un tratamiento")
 
             elif not re.fullmatch(r"AN\d{10}", paciente):
-                st.error("Formato AN + 10 dígitos")
+                st.error("Formato incorrecto")
 
             else:
                 nueva = {
@@ -197,9 +162,38 @@ if role == "Dermatólogo":
                 st.success("Solicitud creada")
 
 # -----------------------
+# FILTROS
+# -----------------------
+st.subheader("Filtros")
+
+colf1, colf2, colf3 = st.columns(3)
+
+f_estado_dir = colf1.selectbox("Estado Director", ["Todos","Pendiente","Validado","No validado"])
+f_estado_far = colf2.selectbox("Estado Farmacia", ["Todos","","Pendiente de dispensación","No validado"])
+f_enfermedad = colf3.selectbox("Enfermedad", ["Todas"] + list(protocolos.keys()))
+
+# aplicar filtros
+filtered = st.session_state.requests
+
+if f_estado_dir != "Todos":
+    filtered = [r for r in filtered if r["Estado Director"] == f_estado_dir]
+
+if f_estado_far != "Todos":
+    filtered = [r for r in filtered if r["Estado Farmacia"] == f_estado_far]
+
+if f_enfermedad != "Todas":
+    filtered = [r for r in filtered if r["Enfermedad"] == f_enfermedad]
+
+# -----------------------
 # TABLA
 # -----------------------
 st.subheader("Solicitudes")
 
-for r in st.session_state.requests:
-    st.write(r)
+for i, r in enumerate(filtered):
+
+    col1, col2, col3, col4 = st.columns([2,2,3,3])
+
+    col1.write(r["Paciente"])
+    col2.write(r["Enfermedad"])
+    col3.write(r["Tratamiento"])
+    col4.write(r["Estado Director"] + " / " + (r["Estado Farmacia"] or "-"))
