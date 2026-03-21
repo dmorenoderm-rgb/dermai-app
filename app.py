@@ -2,6 +2,7 @@ import streamlit as st
 import re
 import json
 from datetime import datetime
+import pandas as pd
 
 st.set_page_config(layout="wide")
 
@@ -188,10 +189,15 @@ if st.button("Enviar solicitud"):
         st.success("Solicitud creada")
 
 # -----------------------
-# LISTADO
+# HISTÓRICO (TABLA)
 # -----------------------
 
 st.subheader("Solicitudes")
 
-for r in st.session_state.requests:
-    st.write(r)
+if st.session_state.requests:
+    df = pd.DataFrame(st.session_state.requests)
+
+    columnas = ["Paciente", "Solicitante", "Enfermedad", "Tratamiento", "Fecha"]
+    df = df[columnas]
+
+    st.dataframe(df, use_container_width=True)
