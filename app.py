@@ -2,24 +2,11 @@ import streamlit as st
 import re
 import json
 from datetime import datetime
-import pandas as pd
 
 st.set_page_config(layout="wide")
 
 st.title("DerMAI PRO")
 st.write("Gestión de Medicamentos de Alto Impacto en Dermatología HUVM")
-
-# -----------------------
-# LOGIN
-# -----------------------
-roles = ["Dermatólogo", "Director de Derma", "Farmacia"]
-role = st.sidebar.selectbox("Acceso", roles)
-
-if role in ["Director de Derma", "Farmacia"]:
-    password = st.sidebar.text_input("Contraseña", type="password")
-    if password != "123":
-        st.warning("Acceso restringido")
-        st.stop()
 
 # -----------------------
 # DATOS
@@ -51,7 +38,7 @@ solicitantes = [
 ]
 
 # -----------------------
-# PROTOCOLOS COMPLETOS
+# PROTOCOLOS
 # -----------------------
 protocolos = {
 
@@ -98,9 +85,7 @@ protocolos = {
 
     "Urticaria crónica espontánea": {
         "texto": "Omalizumab",
-        "drugs": [
-            "Omalizumab 300 mg/4 semanas",
-        ],
+        "drugs": ["Omalizumab 300 mg/4 semanas"],
     },
 
     "Alopecia areata": {
@@ -114,9 +99,7 @@ protocolos = {
 
     "Vitíligo": {
         "texto": "Ruxolitinib tópico",
-        "drugs": [
-            "Ruxolitinib crema 1,5%",
-        ],
+        "drugs": ["Ruxolitinib crema 1,5%"],
     },
 
     "Melanoma": {
@@ -148,106 +131,67 @@ protocolos = {
 }
 
 # -----------------------
-# DASHBOARD
+# FORMULARIO (SIN FORM)
 # -----------------------
-st.subheader("Panel de control")
 
-total = len(st.session_state.requests)
-pendientes = sum(1 for r in st.session_state.requests if r["Estado Director"] == "Pendiente")
-validados = sum(1 for r in st.session_state.requests if r["Estado Director"] == "Validado")
-rechazados = sum(1 for r in st.session_state.requests if r["Estado Director"] == "No validado")
+st.subheader("Nueva solicitud")
 
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Total", total)
-c2.metric("Pendientes", pendientes)
-c3.metric("Validados", validados)
-c4.metric("Rechazados", rechazados)
+paciente = st.text_input("Paciente (AN + 10 dígitos)", value="AN")
 
-# -----------------------
-# FORMULARIO
-# -----------------------
-if role == "Dermatólogo":
+solicitante = st.selectbox("Solicitante", ["Seleccionar"] + solicitantes)
 
-    st.subheader("Nueva solicitud")
+enfermedad = st.selectbox(
+    "Enfermedad",
+    ["Seleccionar"] + list(protocolos.keys())
+)
 
-    with st.form("formulario"):
+if enfermedad != "Seleccionar":
+    st.info(protocolos[enfermedad]["texto"])
+    tratamientos = ["Seleccionar"] + protocolos[enfermedad]["drugs"]
+else:
+    tratamientos = ["Seleccionar"]
 
-        paciente = st.text_input("Paciente (AN + 10 dígitos)", value="AN")
-
-        solicitante = st.selectbox("Solicitante", ["Seleccionar"] + solicitantes)
-
-        enfermedad = st.selectbox("Enfermedad", ["Seleccionar"] + list(protocolos.keys()))
-
-        lista_tratamientos = ["Seleccionar"]
-
-        if enfermedad != "Seleccionar":
-            st.info(protocolos[enfermedad]["texto"])
-            lista_tratamientos = ["Seleccionar"] + protocolos[enfermedad]["drugs"]
-
-        tratamiento = st.selectbox("Tratamiento", lista_tratamientos)
-
-        submitted = st.form_submit_button("Enviar solicitud")
-
-        if submitted:
-
-            paciente = paciente.strip().upper()
-
-            if solicitante == "Seleccionar":
-                st.error("Debe seleccionar un solicitante")
-
-            elif enfermedad == "Seleccionar":
-                st.error("Debe seleccionar una enfermedad")
-
-            elif tratamiento == "Seleccionar":
-                st.error("Debe seleccionar un tratamiento")
-
-            elif not re.fullmatch(r"AN\d{10}", paciente):
-                st.error("Formato incorrecto")
-
-            else:
-                nueva = {
-                    "Paciente": paciente,
-                    "Solicitante": solicitante,
-                    "Enfermedad": enfermedad,
-                    "Tratamiento": tratamiento,
-                    "Estado Director": "Pendiente",
-                    "Estado Farmacia": "",
-                    "Fecha solicitud": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                    "Fecha Director": "",
-                    "Fecha Farmacia": "",
-                }
-
-                st.session_state.requests.insert(0, nueva)
-                save_data(st.session_state.requests)
-
-                st.success("Solicitud creada")
+tratamiento = st.selectbox("Tratamiento", tratamientos)
 
 # -----------------------
-# FILTROS
+# BOTÓN
 # -----------------------
-st.subheader("Filtros")
 
-colf1, colf2, colf3 = st.columns(3)
+if st.button("Enviar solicitud"):
 
-f_estado_dir = colf1.selectbox("Estado Director", ["Todos","Pendiente","Validado","No validado"])
-f_estado_far = colf2.selectbox("Estado Farmacia", ["Todos","","Pendiente de dispensación","No validado"])
-f_enfermedad = colf3.selectbox("Enfermedad", ["Todas"] + list(protocolos.keys()))
+    paciente = paciente.strip().upper()
 
-filtered = st.session_state.requests
+    if solicitante == "Seleccionar":
+        st.error("Debe seleccionar un solicitante")
 
-if f_estado_dir != "Todos":
-    filtered = [r for r in filtered if r["Estado Director"] == f_estado_dir]
+    elif enfermedad == "Seleccionar":
+        st.error("Debe seleccionar una enfermedad")
 
-if f_estado_far != "Todos":
-    filtered = [r for r in filtered if r["Estado Farmacia"] == f_estado_far]
+    elif tratamiento == "Seleccionar":
+        st.error("Debe seleccionar un tratamiento")
 
-if f_enfermedad != "Todas":
-    filtered = [r for r in filtered if r["Enfermedad"] == f_enfermedad]
+    elif not re.fullmatch(r"AN\d{10}", paciente):
+        st.error("Formato AN + 10 dígitos")
+
+    else:
+        nueva = {
+            "Paciente": paciente,
+            "Solicitante": solicitante,
+            "Enfermedad": enfermedad,
+            "Tratamiento": tratamiento,
+            "Fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+        }
+
+        st.session_state.requests.insert(0, nueva)
+        save_data(st.session_state.requests)
+
+        st.success("Solicitud creada")
 
 # -----------------------
-# TABLA
+# LISTADO
 # -----------------------
+
 st.subheader("Solicitudes")
 
-for r in filtered:
+for r in st.session_state.requests:
     st.write(r)
