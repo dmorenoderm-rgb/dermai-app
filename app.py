@@ -164,56 +164,53 @@ if role == "Dermatólogo":
 
     st.subheader("Nueva solicitud")
 
-    col1, col2 = st.columns([1, 4])
+    with st.form("formulario", clear_on_submit=True):
 
-    with col1:
-        st.write("AN")
+        col1, col2 = st.columns([1, 4])
 
-    with col2:
-        paciente_num = st.text_input("Número paciente (10 dígitos)", key="paciente")
+        with col1:
+            st.write("AN")
 
-    paciente = "AN" + paciente_num
+        with col2:
+            paciente_num = st.text_input("Número paciente (10 dígitos)")
 
-    solicitante = st.selectbox("Solicitante", solicitantes, key="solicitante")
-    enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()), key="enfermedad")
+        paciente = "AN" + paciente_num
 
-    st.info(protocolos[enfermedad]["texto"])
+        solicitante = st.selectbox("Solicitante", solicitantes)
+        enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()))
 
-    tratamiento = st.selectbox(
-        "Tratamiento",
-        protocolos[enfermedad]["drugs"],
-        key="tratamiento"
-    )
+        st.info(protocolos[enfermedad]["texto"])
 
-    if st.button("Enviar solicitud"):
+        tratamiento = st.selectbox(
+            "Tratamiento",
+            protocolos[enfermedad]["drugs"]
+        )
 
-        if not re.match(r"^\d{10}$", paciente_num):
-            st.error("Debe introducir 10 dígitos")
-        else:
-            nueva = {
-                "Paciente": paciente,
-                "Solicitante": solicitante,
-                "Enfermedad": enfermedad,
-                "Tratamiento": tratamiento,
-                "Estado Director": "Pendiente",
-                "Estado Farmacia": "",
-                "Fecha solicitud": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                "Fecha Director": "",
-                "Fecha Farmacia": "",
-            }
+        submitted = st.form_submit_button("Enviar solicitud")
 
-            st.session_state.requests.insert(0, nueva)
-            save_data(st.session_state.requests)
+        if submitted:
 
-            # RESET FORMULARIO
-            st.session_state.paciente = ""
-            st.session_state.solicitante = solicitantes[0]
-            st.session_state.enfermedad = list(protocolos.keys())[0]
-            st.session_state.tratamiento = protocolos[st.session_state.enfermedad]["drugs"][0]
+            if not re.match(r"^\d{10}$", paciente_num):
+                st.error("Debe introducir 10 dígitos")
 
-            st.success("Solicitud creada")
-            st.rerun()
+            else:
+                nueva = {
+                    "Paciente": paciente,
+                    "Solicitante": solicitante,
+                    "Enfermedad": enfermedad,
+                    "Tratamiento": tratamiento,
+                    "Estado Director": "Pendiente",
+                    "Estado Farmacia": "",
+                    "Fecha solicitud": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "Fecha Director": "",
+                    "Fecha Farmacia": "",
+                }
 
+                st.session_state.requests.insert(0, nueva)
+                save_data(st.session_state.requests)
+
+                st.success("Solicitud creada")
+                
 # -----------------------
 # EXPORTACIÓN CSV (ESTABLE)
 # -----------------------
