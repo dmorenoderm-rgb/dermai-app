@@ -3,7 +3,6 @@ import re
 import json
 from datetime import datetime
 import pandas as pd
-from io import BytesIO
 
 # -----------------------
 # CONFIGURACIÓN
@@ -159,24 +158,37 @@ protocolos = {
 }
 
 # -----------------------
-# FORMULARIO (SIN BOTÓN NUEVA)
+# FORMULARIO
 # -----------------------
 if role == "Dermatólogo":
 
     st.subheader("Nueva solicitud")
 
-    paciente = st.text_input("Paciente (AN + 10 dígitos)")
-    solicitante = st.selectbox("Solicitante", solicitantes)
-    enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()))
+    col1, col2 = st.columns([1, 4])
+
+    with col1:
+        st.write("AN")
+
+    with col2:
+        paciente_num = st.text_input("Número paciente (10 dígitos)", key="paciente")
+
+    paciente = "AN" + paciente_num
+
+    solicitante = st.selectbox("Solicitante", solicitantes, key="solicitante")
+    enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()), key="enfermedad")
 
     st.info(protocolos[enfermedad]["texto"])
 
-    tratamiento = st.selectbox("Tratamiento", protocolos[enfermedad]["drugs"])
+    tratamiento = st.selectbox(
+        "Tratamiento",
+        protocolos[enfermedad]["drugs"],
+        key="tratamiento"
+    )
 
     if st.button("Enviar solicitud"):
 
-        if not re.match(r"^AN\d{10}$", paciente):
-            st.error("Formato incorrecto")
+        if not re.match(r"^\d{10}$", paciente_num):
+            st.error("Debe introducir 10 dígitos")
         else:
             nueva = {
                 "Paciente": paciente,
@@ -193,11 +205,17 @@ if role == "Dermatólogo":
             st.session_state.requests.insert(0, nueva)
             save_data(st.session_state.requests)
 
+            # RESET FORMULARIO
+            st.session_state.paciente = ""
+            st.session_state.solicitante = solicitantes[0]
+            st.session_state.enfermedad = list(protocolos.keys())[0]
+            st.session_state.tratamiento = protocolos[st.session_state.enfermedad]["drugs"][0]
+
             st.success("Solicitud creada")
             st.rerun()
 
 # -----------------------
-# DESCARGA EXCEL (ESTABLE)
+# EXPORTACIÓN CSV (ESTABLE)
 # -----------------------
 def generar_csv(data):
     df = pd.DataFrame(data)
@@ -207,7 +225,7 @@ if st.session_state.requests:
     csv = generar_csv(st.session_state.requests)
 
     st.download_button(
-        label="Descargar CSV",
+        label="Descargar Excel (CSV)",
         data=csv,
         file_name="solicitudes_dermai.csv",
         mime="text/csv"
