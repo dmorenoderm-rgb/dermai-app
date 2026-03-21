@@ -166,6 +166,7 @@ if role == "Dermatólogo":
 
     with st.form("formulario", clear_on_submit=True):
 
+        # PACIENTE
         col1, col2 = st.columns([1, 4])
 
         with col1:
@@ -176,22 +177,42 @@ if role == "Dermatólogo":
 
         paciente = "AN" + paciente_num
 
-        solicitante = st.selectbox("Solicitante", solicitantes)
-        enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()))
-
-        st.info(protocolos[enfermedad]["texto"])
-
-        tratamiento = st.selectbox(
-            "Tratamiento",
-            protocolos[enfermedad]["drugs"]
+        # SOLICITANTE
+        solicitante = st.selectbox(
+            "Solicitante",
+            ["Seleccionar"] + solicitantes
         )
 
+        # ENFERMEDAD
+        enfermedad = st.selectbox(
+            "Enfermedad",
+            ["Seleccionar"] + list(protocolos.keys())
+        )
+
+        # PROTOCOLO
+        if enfermedad != "Seleccionar":
+            st.info(protocolos[enfermedad]["texto"])
+
+        # TRATAMIENTO
+        if enfermedad == "Seleccionar":
+            tratamiento = st.selectbox("Tratamiento", ["Seleccionar"])
+        else:
+            tratamiento = st.selectbox(
+                "Tratamiento",
+                ["Seleccionar"] + protocolos[enfermedad]["drugs"]
+            )
+
+        # BOTÓN
         submitted = st.form_submit_button("Enviar solicitud")
 
+        # VALIDACIÓN
         if submitted:
 
             if not re.match(r"^\d{10}$", paciente_num):
                 st.error("Debe introducir 10 dígitos")
+
+            elif solicitante == "Seleccionar" or enfermedad == "Seleccionar" or tratamiento == "Seleccionar":
+                st.error("Debe completar todos los campos")
 
             else:
                 nueva = {
