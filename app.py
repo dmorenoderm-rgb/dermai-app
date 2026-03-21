@@ -172,7 +172,6 @@ tratamiento = st.selectbox(
     "Tratamiento",
     lista_tratamientos
 )
-
         submitted = st.form_submit_button("Enviar solicitud")
 
         if submitted:
