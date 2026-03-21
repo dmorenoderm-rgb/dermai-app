@@ -10,6 +10,18 @@ st.title("DerMAI PRO")
 st.write("Gestión de Medicamentos de Alto Impacto en Dermatología HUVM")
 
 # -----------------------
+# LOGIN
+# -----------------------
+roles = ["Dermatólogo", "Director de Derma", "Farmacia"]
+role = st.sidebar.selectbox("Acceso", roles)
+
+if role in ["Director de Derma", "Farmacia"]:
+    password = st.sidebar.text_input("Contraseña", type="password")
+    if password != "123":
+        st.warning("Acceso restringido")
+        st.stop()
+
+# -----------------------
 # DATOS
 # -----------------------
 FILE = "data.json"
@@ -42,7 +54,6 @@ solicitantes = [
 # PROTOCOLOS
 # -----------------------
 protocolos = {
-
     "Psoriasis en placas": {
         "texto": "1º Adalimumab → 2º Ustekinumab → 3º Tildrakizumab → 4º Bimekizumab",
         "drugs": [
@@ -57,7 +68,6 @@ protocolos = {
             "Bimekizumab 320 mg/8 semanas",
         ],
     },
-
     "Dermatitis atópica": {
         "texto": "1º Dupilumab → 2º Tralokinumab → 3º JAK",
         "drugs": [
@@ -74,7 +84,6 @@ protocolos = {
             "Abrocitinib 200 mg",
         ],
     },
-
     "Hidradenitis supurativa": {
         "texto": "Adalimumab primera línea",
         "drugs": [
@@ -83,12 +92,10 @@ protocolos = {
             "Bimekizumab 320 mg/4 semanas",
         ],
     },
-
     "Urticaria crónica espontánea": {
         "texto": "Omalizumab",
         "drugs": ["Omalizumab 300 mg/4 semanas"],
     },
-
     "Alopecia areata": {
         "texto": "JAK",
         "drugs": [
@@ -97,12 +104,10 @@ protocolos = {
             "Ritlecitinib 50 mg",
         ],
     },
-
     "Vitíligo": {
         "texto": "Ruxolitinib tópico",
         "drugs": ["Ruxolitinib crema 1,5%"],
     },
-
     "Melanoma": {
         "texto": "Inmunoterapia",
         "drugs": [
@@ -112,7 +117,6 @@ protocolos = {
             "Pembrolizumab 400 mg/6 semanas",
         ],
     },
-
     "Carcinoma basocelular": {
         "texto": "Hedgehog",
         "drugs": [
@@ -120,7 +124,6 @@ protocolos = {
             "Sonidegib 200 mg diario",
         ],
     },
-
     "Carcinoma escamoso cutáneo": {
         "texto": "Anti-PD1",
         "drugs": [
@@ -132,72 +135,105 @@ protocolos = {
 }
 
 # -----------------------
-# FORMULARIO (SIN FORM)
+# FORMULARIO
 # -----------------------
+if role == "Dermatólogo":
 
-st.subheader("Nueva solicitud")
+    st.subheader("Nueva solicitud")
 
-paciente = st.text_input("Paciente (AN + 10 dígitos)", value="AN")
+    paciente = st.text_input("Paciente (AN + 10 dígitos)", value="AN")
 
-solicitante = st.selectbox("Solicitante", ["Seleccionar"] + solicitantes)
+    solicitante = st.selectbox("Solicitante", ["Seleccionar"] + solicitantes)
 
-enfermedad = st.selectbox(
-    "Enfermedad",
-    ["Seleccionar"] + list(protocolos.keys())
-)
+    enfermedad = st.selectbox("Enfermedad", ["Seleccionar"] + list(protocolos.keys()))
 
-if enfermedad != "Seleccionar":
-    st.info(protocolos[enfermedad]["texto"])
-    tratamientos = ["Seleccionar"] + protocolos[enfermedad]["drugs"]
-else:
-    tratamientos = ["Seleccionar"]
-
-tratamiento = st.selectbox("Tratamiento", tratamientos)
-
-# -----------------------
-# BOTÓN
-# -----------------------
-
-if st.button("Enviar solicitud"):
-
-    paciente = paciente.strip().upper()
-
-    if solicitante == "Seleccionar":
-        st.error("Debe seleccionar un solicitante")
-
-    elif enfermedad == "Seleccionar":
-        st.error("Debe seleccionar una enfermedad")
-
-    elif tratamiento == "Seleccionar":
-        st.error("Debe seleccionar un tratamiento")
-
-    elif not re.fullmatch(r"AN\d{10}", paciente):
-        st.error("Formato AN + 10 dígitos")
-
+    if enfermedad != "Seleccionar":
+        st.info(protocolos[enfermedad]["texto"])
+        tratamientos = ["Seleccionar"] + protocolos[enfermedad]["drugs"]
     else:
-        nueva = {
-            "Paciente": paciente,
-            "Solicitante": solicitante,
-            "Enfermedad": enfermedad,
-            "Tratamiento": tratamiento,
-            "Fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
-        }
+        tratamientos = ["Seleccionar"]
 
-        st.session_state.requests.insert(0, nueva)
-        save_data(st.session_state.requests)
+    tratamiento = st.selectbox("Tratamiento", tratamientos)
 
-        st.success("Solicitud creada")
+    if st.button("Enviar solicitud"):
+
+        paciente = paciente.strip().upper()
+
+        if solicitante == "Seleccionar":
+            st.error("Debe seleccionar un solicitante")
+
+        elif enfermedad == "Seleccionar":
+            st.error("Debe seleccionar una enfermedad")
+
+        elif tratamiento == "Seleccionar":
+            st.error("Debe seleccionar un tratamiento")
+
+        elif not re.fullmatch(r"AN\d{10}", paciente):
+            st.error("Formato AN + 10 dígitos")
+
+        else:
+            nueva = {
+                "Paciente": paciente,
+                "Solicitante": solicitante,
+                "Enfermedad": enfermedad,
+                "Tratamiento": tratamiento,
+                "Estado Director": "Pendiente",
+                "Estado Farmacia": "",
+                "Fecha solicitud": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "Fecha Director": "",
+                "Fecha Farmacia": "",
+            }
+
+            st.session_state.requests.insert(0, nueva)
+            save_data(st.session_state.requests)
+
+            st.success("Solicitud creada")
 
 # -----------------------
-# HISTÓRICO (TABLA)
+# TABLA + VALIDACIONES
 # -----------------------
-
 st.subheader("Solicitudes")
 
 if st.session_state.requests:
+
     df = pd.DataFrame(st.session_state.requests)
-
-    columnas = ["Paciente", "Solicitante", "Enfermedad", "Tratamiento", "Fecha"]
-    df = df[columnas]
-
     st.dataframe(df, use_container_width=True)
+
+    for i, r in enumerate(st.session_state.requests):
+
+        st.write("---")
+        st.write(f"Paciente: {r['Paciente']} | {r['Enfermedad']}")
+
+        # DIRECTOR
+        if role == "Director de Derma" and r["Estado Director"] == "Pendiente":
+
+            col1, col2 = st.columns(2)
+
+            if col1.button("Validar", key=f"val_{i}"):
+                r["Estado Director"] = "Validado"
+                r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                save_data(st.session_state.requests)
+                st.rerun()
+
+            if col2.button("No validar", key=f"noval_{i}"):
+                r["Estado Director"] = "No validado"
+                r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                save_data(st.session_state.requests)
+                st.rerun()
+
+        # FARMACIA
+        if role == "Farmacia" and r["Estado Director"] == "Validado":
+
+            col1, col2 = st.columns(2)
+
+            if col1.button("Dispensar", key=f"disp_{i}"):
+                r["Estado Farmacia"] = "Pendiente de dispensación"
+                r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                save_data(st.session_state.requests)
+                st.rerun()
+
+            if col2.button("Rechazar", key=f"rech_{i}"):
+                r["Estado Farmacia"] = "No validado"
+                r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                save_data(st.session_state.requests)
+                st.rerun()
