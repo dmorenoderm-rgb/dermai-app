@@ -1,12 +1,12 @@
 import streamlit as st
 import re
 import json
-import pandas as pd
 from datetime import datetime
+import pandas as pd
 from io import BytesIO
 
 # -----------------------
-# CONFIGURACIÓN UI
+# CONFIGURACIÓN
 # -----------------------
 st.set_page_config(layout="wide")
 
@@ -30,24 +30,14 @@ st.write("Gestión de Medicamentos de Alto Impacto en Dermatología HUVM")
 roles = ["Dermatólogo", "Director de Derma", "Farmacia"]
 role = st.sidebar.selectbox("Acceso", roles)
 
-credentials = {
-    "Director de Derma": "123",
-    "Farmacia": "123"
-}
-
-auth = True
-
-if role in credentials:
+if role in ["Director de Derma", "Farmacia"]:
     password = st.sidebar.text_input("Contraseña", type="password")
-    if password != credentials[role]:
+    if password != "123":
         st.warning("Acceso restringido")
-        auth = False
-
-if not auth:
-    st.stop()
+        st.stop()
 
 # -----------------------
-# PERSISTENCIA
+# DATOS
 # -----------------------
 FILE = "data.json"
 
@@ -66,12 +56,6 @@ if "requests" not in st.session_state:
     st.session_state.requests = load_data()
 
 # -----------------------
-# CONTROL RESET FORMULARIO
-# -----------------------
-if "reset_form" not in st.session_state:
-    st.session_state.reset_form = False
-
-# -----------------------
 # SOLICITANTES
 # -----------------------
 solicitantes = [
@@ -82,7 +66,7 @@ solicitantes = [
 ]
 
 # -----------------------
-# PROTOCOLOS COMPLETOS
+# PROTOCOLOS
 # -----------------------
 protocolos = {
 
@@ -90,15 +74,10 @@ protocolos = {
         "texto": "1º Adalimumab → 2º Ustekinumab → 3º Tildrakizumab → 4º Bimekizumab",
         "drugs": [
             "Adalimumab 40 mg/2 semanas",
-            "Etanercept 50 mg semanal",
-            "Infliximab 5 mg/kg cada 8 semanas",
-            "Certolizumab 200 mg/2 semanas",
-            "Certolizumab 400 mg/4 semanas",
             "Ustekinumab 45 mg/12 semanas",
             "Ustekinumab 90 mg/12 semanas",
             "Secukinumab 300 mg/4 semanas",
             "Ixekizumab 80 mg/4 semanas",
-            "Brodalumab 210 mg/2 semanas",
             "Guselkumab 100 mg/8 semanas",
             "Risankizumab 150 mg/12 semanas",
             "Tildrakizumab 100 mg/12 semanas",
@@ -152,16 +131,12 @@ protocolos = {
     },
 
     "Melanoma": {
-        "texto": "Inmunoterapia / terapias dirigidas",
+        "texto": "Inmunoterapia",
         "drugs": [
             "Nivolumab 240 mg/2 semanas",
             "Nivolumab 480 mg/4 semanas",
             "Pembrolizumab 200 mg/3 semanas",
             "Pembrolizumab 400 mg/6 semanas",
-            "Ipilimumab 3 mg/kg",
-            "Dabrafenib + trametinib",
-            "Encorafenib + binimetinib",
-            "Vemurafenib + cobimetinib",
         ],
     },
 
@@ -184,74 +159,59 @@ protocolos = {
 }
 
 # -----------------------
-# FORMULARIO
+# FORMULARIO (SIN BOTÓN NUEVA)
 # -----------------------
 if role == "Dermatólogo":
 
     st.subheader("Nueva solicitud")
 
-    col_btn = st.columns([1,6])
-    if col_btn[0].button("Nueva solicitud"):
-        st.session_state.reset_form = True
-
-    if st.session_state.reset_form:
-        st.session_state.paciente = ""
-        st.session_state.reset_form = False
-
-    paciente = st.text_input("Paciente (AN + 10 dígitos)", key="paciente")
+    paciente = st.text_input("Paciente (AN + 10 dígitos)")
     solicitante = st.selectbox("Solicitante", solicitantes)
     enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()))
 
-    st.write(protocolos[enfermedad]["texto"])
+    st.info(protocolos[enfermedad]["texto"])
 
-    tratamiento = st.selectbox(
-        "Tratamiento",
-        protocolos[enfermedad]["drugs"]
-    )
+    tratamiento = st.selectbox("Tratamiento", protocolos[enfermedad]["drugs"])
 
     if st.button("Enviar solicitud"):
 
-    if not re.match(r"^AN\d{10}$", paciente):
-        st.error("Formato incorrecto")
+        if not re.match(r"^AN\d{10}$", paciente):
+            st.error("Formato incorrecto")
+        else:
+            nueva = {
+                "Paciente": paciente,
+                "Solicitante": solicitante,
+                "Enfermedad": enfermedad,
+                "Tratamiento": tratamiento,
+                "Estado Director": "Pendiente",
+                "Estado Farmacia": "",
+                "Fecha solicitud": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "Fecha Director": "",
+                "Fecha Farmacia": "",
+            }
 
-    else:
-        nueva = {
-            "Paciente": paciente,
-            "Solicitante": solicitante,
-            "Enfermedad": enfermedad,
-            "Tratamiento": tratamiento,
-            "Estado Director": "Pendiente",
-            "Estado Farmacia": "",
-            "Fecha solicitud": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "Fecha Director": "",
-            "Fecha Farmacia": "",
-        }
+            st.session_state.requests.insert(0, nueva)
+            save_data(st.session_state.requests)
 
-        st.session_state.requests.insert(0, nueva)
-        save_data(st.session_state.requests)
+            st.success("Solicitud creada")
+            st.rerun()
 
-        st.success("Solicitud creada")
-        st.rerun()
-        
 # -----------------------
-# EXPORTAR EXCEL
+# DESCARGA EXCEL (ESTABLE)
 # -----------------------
-st.subheader("Solicitudes")
+def generar_excel(data):
+    df = pd.DataFrame(data)
+    buffer = BytesIO()
+    df.to_excel(buffer, index=False, engine="openpyxl")
+    buffer.seek(0)
+    return buffer
 
-df = pd.DataFrame(st.session_state.requests)
-
-def to_excel(df):
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False)
-    return output.getvalue()
-
-if not df.empty:
-    excel_data = to_excel(df)
+if st.session_state.requests:
+    excel = generar_excel(st.session_state.requests)
 
     st.download_button(
         label="Descargar Excel",
-        data=excel_data,
+        data=excel,
         file_name="solicitudes_dermai.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
@@ -259,6 +219,8 @@ if not df.empty:
 # -----------------------
 # TABLA
 # -----------------------
+st.subheader("Solicitudes")
+
 for i, r in enumerate(st.session_state.requests):
 
     col1, col2, col3, col4, col5, col6 = st.columns([2,2,3,2,2,3])
@@ -281,34 +243,34 @@ for i, r in enumerate(st.session_state.requests):
         if r["Estado Director"] == "No validado" or r["Estado Farmacia"] == "No validado":
             st.write("Solicitar a Comisión Derma-Farmacia")
 
-    # -----------------------
     # DIRECTOR
-    # -----------------------
     if role == "Director de Derma" and r["Estado Director"] == "Pendiente":
 
         if st.button(f"Validar {i}"):
             r["Estado Director"] = "Validado"
             r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
+            st.rerun()
 
         if st.button(f"No validar {i}"):
             r["Estado Director"] = "No validado"
             r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
+            st.rerun()
 
-    # -----------------------
     # FARMACIA
-    # -----------------------
     if role == "Farmacia" and r["Estado Director"] == "Validado":
 
         if st.button(f"Pendiente dispensación {i}"):
             r["Estado Farmacia"] = "Pendiente de dispensación"
             r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
+            st.rerun()
 
         if st.button(f"No validar farmacia {i}"):
             r["Estado Farmacia"] = "No validado"
             r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
+            st.rerun()
 
     st.divider()
