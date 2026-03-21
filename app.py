@@ -222,7 +222,7 @@ if st.session_state.requests:
                 st.rerun()
 
         # FARMACIA
-        if role == "Farmacia" and r["Estado Director"] == "Validado":
+        if role == "Farmacia" and r.get["Estado Director"] == "Validado":
 
             col1, col2 = st.columns(2)
 
