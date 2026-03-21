@@ -191,10 +191,15 @@ if role == "Dermatólogo":
         else:
             lista_tratamientos = ["Seleccionar"] + protocolos[enfermedad]["drugs"]
 
-        tratamiento = st.selectbox(
+       if enfermedad == "Seleccionar":
+    lista_tratamientos = ["Seleccionar"]
+else:
+    lista_tratamientos = ["Seleccionar"] + protocolos[enfermedad]["drugs"]
+
+tratamiento = st.selectbox(
     "Tratamiento",
     lista_tratamientos,
-    key=f"tratamiento_{enfermedad}"
+    key=f"tratamiento_{enfermedad}"   # 🔥 CLAVE
 )
 
         # BOTÓN
