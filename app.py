@@ -68,6 +68,7 @@ solicitantes = [
 # PROTOCOLOS
 # -----------------------
 protocolos = {
+
     "Psoriasis en placas": {
         "texto": "1º Adalimumab → 2º Ustekinumab → 3º Tildrakizumab → 4º Bimekizumab",
         "drugs": [
@@ -82,6 +83,7 @@ protocolos = {
             "Bimekizumab 320 mg/8 semanas",
         ],
     },
+
     "Dermatitis atópica": {
         "texto": "1º Dupilumab → 2º Tralokinumab → 3º JAK",
         "drugs": [
@@ -98,6 +100,7 @@ protocolos = {
             "Abrocitinib 200 mg",
         ],
     },
+
     "Hidradenitis supurativa": {
         "texto": "Adalimumab primera línea",
         "drugs": [
@@ -106,10 +109,12 @@ protocolos = {
             "Bimekizumab 320 mg/4 semanas",
         ],
     },
+
     "Urticaria crónica espontánea": {
         "texto": "Omalizumab",
         "drugs": ["Omalizumab 300 mg/4 semanas"],
     },
+
     "Alopecia areata": {
         "texto": "JAK",
         "drugs": [
@@ -118,10 +123,12 @@ protocolos = {
             "Ritlecitinib 50 mg",
         ],
     },
+
     "Vitíligo": {
         "texto": "Ruxolitinib tópico",
         "drugs": ["Ruxolitinib crema 1,5%"],
     },
+
     "Melanoma": {
         "texto": "Inmunoterapia",
         "drugs": [
@@ -131,6 +138,7 @@ protocolos = {
             "Pembrolizumab 400 mg/6 semanas",
         ],
     },
+
     "Carcinoma basocelular": {
         "texto": "Hedgehog",
         "drugs": [
@@ -138,6 +146,7 @@ protocolos = {
             "Sonidegib 200 mg diario",
         ],
     },
+
     "Carcinoma escamoso cutáneo": {
         "texto": "Anti-PD1",
         "drugs": [
@@ -160,21 +169,21 @@ if role == "Dermatólogo":
         paciente = st.text_input("Paciente (AN + 10 dígitos)", value="AN")
 
         solicitante = st.selectbox("Solicitante", ["Seleccionar"] + solicitantes)
+
         enfermedad = st.selectbox("Enfermedad", ["Seleccionar"] + list(protocolos.keys()))
 
+        # Tratamientos SIEMPRE visibles
         if enfermedad != "Seleccionar":
             st.info(protocolos[enfermedad]["texto"])
             lista_tratamientos = ["Seleccionar"] + protocolos[enfermedad]["drugs"]
         else:
             lista_tratamientos = ["Seleccionar"]
 
-tratamiento = st.selectbox(
-    "Tratamiento",
-    lista_tratamientos
-)
-submitted = st.form_submit_button("Enviar solicitud")
+        tratamiento = st.selectbox("Tratamiento", lista_tratamientos)
 
-if submitted:
+        submitted = st.form_submit_button("Enviar solicitud")
+
+        if submitted:
 
             paciente = paciente.strip().upper()
 
@@ -188,7 +197,7 @@ if submitted:
                 st.error("Debe seleccionar un tratamiento")
 
             elif not re.fullmatch(r"AN\d{10}", paciente):
-                st.error("El paciente debe tener formato AN seguido de 10 dígitos (ej: AN1234567890)")
+                st.error("El paciente debe tener formato AN seguido de 10 dígitos")
 
             else:
                 nueva = {
