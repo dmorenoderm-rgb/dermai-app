@@ -68,7 +68,6 @@ solicitantes = [
 # PROTOCOLOS
 # -----------------------
 protocolos = {
-
     "Psoriasis en placas": {
         "texto": "1º Adalimumab → 2º Ustekinumab → 3º Tildrakizumab → 4º Bimekizumab",
         "drugs": [
@@ -83,7 +82,6 @@ protocolos = {
             "Bimekizumab 320 mg/8 semanas",
         ],
     },
-
     "Dermatitis atópica": {
         "texto": "1º Dupilumab → 2º Tralokinumab → 3º JAK",
         "drugs": [
@@ -100,7 +98,6 @@ protocolos = {
             "Abrocitinib 200 mg",
         ],
     },
-
     "Hidradenitis supurativa": {
         "texto": "Adalimumab primera línea",
         "drugs": [
@@ -109,12 +106,10 @@ protocolos = {
             "Bimekizumab 320 mg/4 semanas",
         ],
     },
-
     "Urticaria crónica espontánea": {
         "texto": "Omalizumab",
         "drugs": ["Omalizumab 300 mg/4 semanas"],
     },
-
     "Alopecia areata": {
         "texto": "JAK",
         "drugs": [
@@ -123,12 +118,10 @@ protocolos = {
             "Ritlecitinib 50 mg",
         ],
     },
-
     "Vitíligo": {
         "texto": "Ruxolitinib tópico",
         "drugs": ["Ruxolitinib crema 1,5%"],
     },
-
     "Melanoma": {
         "texto": "Inmunoterapia",
         "drugs": [
@@ -138,7 +131,6 @@ protocolos = {
             "Pembrolizumab 400 mg/6 semanas",
         ],
     },
-
     "Carcinoma basocelular": {
         "texto": "Hedgehog",
         "drugs": [
@@ -146,7 +138,6 @@ protocolos = {
             "Sonidegib 200 mg diario",
         ],
     },
-
     "Carcinoma escamoso cutáneo": {
         "texto": "Anti-PD1",
         "drugs": [
@@ -166,32 +157,37 @@ if role == "Dermatólogo":
 
     with st.form("formulario", clear_on_submit=True):
 
-        col1, col2 = st.columns([1, 4])
+        paciente = st.text_input("Paciente (AN + 10 dígitos)", value="AN")
 
-        with col1:
-            st.write("AN")
+        solicitante = st.selectbox("Solicitante", ["Seleccionar"] + solicitantes)
+        enfermedad = st.selectbox("Enfermedad", ["Seleccionar"] + list(protocolos.keys()))
 
-        with col2:
-            paciente_num = st.text_input("Número paciente (10 dígitos)")
-
-        paciente = "AN" + paciente_num
-
-        solicitante = st.selectbox("Solicitante", solicitantes)
-        enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()))
-
-        st.info(protocolos[enfermedad]["texto"])
-
-        tratamiento = st.selectbox(
-            "Tratamiento",
-            protocolos[enfermedad]["drugs"]
-        )
+        if enfermedad != "Seleccionar":
+            st.info(protocolos[enfermedad]["texto"])
+            tratamiento = st.selectbox(
+                "Tratamiento",
+                ["Seleccionar"] + protocolos[enfermedad]["drugs"]
+            )
+        else:
+            tratamiento = "Seleccionar"
 
         submitted = st.form_submit_button("Enviar solicitud")
 
         if submitted:
 
-            if not re.match(r"^\d{10}$", paciente_num):
-                st.error("Debe introducir 10 dígitos")
+            paciente = paciente.strip().upper()
+
+            if solicitante == "Seleccionar":
+                st.error("Debe seleccionar un solicitante")
+
+            elif enfermedad == "Seleccionar":
+                st.error("Debe seleccionar una enfermedad")
+
+            elif tratamiento == "Seleccionar":
+                st.error("Debe seleccionar un tratamiento")
+
+            elif not re.fullmatch(r"AN\d{10}", paciente):
+                st.error("El paciente debe tener formato AN seguido de 10 dígitos (ej: AN1234567890)")
 
             else:
                 nueva = {
@@ -210,9 +206,9 @@ if role == "Dermatólogo":
                 save_data(st.session_state.requests)
 
                 st.success("Solicitud creada")
-                
+
 # -----------------------
-# EXPORTACIÓN CSV (ESTABLE)
+# EXPORTACIÓN CSV
 # -----------------------
 def generar_csv(data):
     df = pd.DataFrame(data)
@@ -222,7 +218,7 @@ if st.session_state.requests:
     csv = generar_csv(st.session_state.requests)
 
     st.download_button(
-        label="Descargar Excel (CSV)",
+        label="Descargar CSV",
         data=csv,
         file_name="solicitudes_dermai.csv",
         mime="text/csv"
@@ -255,31 +251,29 @@ for i, r in enumerate(st.session_state.requests):
         if r["Estado Director"] == "No validado" or r["Estado Farmacia"] == "No validado":
             st.write("Solicitar a Comisión Derma-Farmacia")
 
-    # DIRECTOR
     if role == "Director de Derma" and r["Estado Director"] == "Pendiente":
 
-        if st.button(f"Validar {i}"):
+        if st.button("Validar", key=f"validar_{i}"):
             r["Estado Director"] = "Validado"
             r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
             st.rerun()
 
-        if st.button(f"No validar {i}"):
+        if st.button("No validar", key=f"no_validar_{i}"):
             r["Estado Director"] = "No validado"
             r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
             st.rerun()
 
-    # FARMACIA
     if role == "Farmacia" and r["Estado Director"] == "Validado":
 
-        if st.button(f"Pendiente dispensación {i}"):
+        if st.button("Pendiente dispensación", key=f"disp_{i}"):
             r["Estado Farmacia"] = "Pendiente de dispensación"
             r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
             st.rerun()
 
-        if st.button(f"No validar farmacia {i}"):
+        if st.button("No validar farmacia", key=f"farm_no_{i}"):
             r["Estado Farmacia"] = "No validado"
             r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
             save_data(st.session_state.requests)
