@@ -199,21 +199,18 @@ if role == "Dermatólogo":
 # -----------------------
 # DESCARGA EXCEL (ESTABLE)
 # -----------------------
-def generar_excel(data):
+def generar_csv(data):
     df = pd.DataFrame(data)
-    buffer = BytesIO()
-    df.to_excel(buffer, index=False, engine="openpyxl")
-    buffer.seek(0)
-    return buffer
+    return df.to_csv(index=False).encode('utf-8')
 
 if st.session_state.requests:
-    excel = generar_excel(st.session_state.requests)
+    csv = generar_csv(st.session_state.requests)
 
     st.download_button(
-        label="Descargar Excel",
-        data=excel,
-        file_name="solicitudes_dermai.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        label="Descargar CSV",
+        data=csv,
+        file_name="solicitudes_dermai.csv",
+        mime="text/csv"
     )
 
 # -----------------------
