@@ -191,7 +191,11 @@ if role == "Dermatólogo":
         else:
             lista_tratamientos = ["Seleccionar"] + protocolos[enfermedad]["drugs"]
 
-        tratamiento = st.selectbox("Tratamiento", lista_tratamientos)
+        tratamiento = st.selectbox(
+    "Tratamiento",
+    lista_tratamientos,
+    key=f"tratamiento_{enfermedad}"
+)
 
         # BOTÓN
         submitted = st.form_submit_button("Enviar solicitud")
