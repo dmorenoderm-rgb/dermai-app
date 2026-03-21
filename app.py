@@ -5,20 +5,17 @@ from datetime import datetime
 import pandas as pd
 
 # -----------------------
-# CONFIGURACIÓN
+# CONFIG
 # -----------------------
 st.set_page_config(layout="wide")
 
-st.markdown(
-    """
-    <style>
-    html, body, [class*="css"] {
-        font-family: Arial !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown("""
+<style>
+html, body, [class*="css"] {
+    font-family: Arial !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 st.title("DerMAI")
 st.write("Gestión de Medicamentos de Alto Impacto en Dermatología HUVM")
@@ -36,7 +33,7 @@ if role in ["Director de Derma", "Farmacia"]:
         st.stop()
 
 # -----------------------
-# DATOS
+# DATA
 # -----------------------
 FILE = "data.json"
 
@@ -65,7 +62,7 @@ solicitantes = [
 ]
 
 # -----------------------
-# PROTOCOLOS
+# PROTOCOLOS (COMPLETOS)
 # -----------------------
 protocolos = {
 
@@ -73,6 +70,10 @@ protocolos = {
         "texto": "1º Adalimumab → 2º Ustekinumab → 3º Tildrakizumab → 4º Bimekizumab",
         "drugs": [
             "Adalimumab 40 mg/2 semanas",
+            "Etanercept 50 mg semanal",
+            "Infliximab 5 mg/kg/8 semanas",
+            "Certolizumab 200 mg/2 semanas",
+            "Certolizumab 400 mg/4 semanas",
             "Ustekinumab 45 mg/12 semanas",
             "Ustekinumab 90 mg/12 semanas",
             "Secukinumab 300 mg/4 semanas",
@@ -136,14 +137,15 @@ protocolos = {
             "Nivolumab 480 mg/4 semanas",
             "Pembrolizumab 200 mg/3 semanas",
             "Pembrolizumab 400 mg/6 semanas",
+            "Ipilimumab 3 mg/kg",
         ],
     },
 
     "Carcinoma basocelular": {
         "texto": "Hedgehog",
         "drugs": [
-            "Vismodegib 150 mg diario",
-            "Sonidegib 200 mg diario",
+            "Vismodegib 150 mg",
+            "Sonidegib 200 mg",
         ],
     },
 
@@ -166,41 +168,35 @@ if role == "Dermatólogo":
 
     with st.form("formulario", clear_on_submit=True):
 
-        # PACIENTE
         paciente_input = st.text_input("Paciente", placeholder="AN1234567890")
 
-        # SOLICITANTE
         solicitante = st.selectbox(
             "Solicitante",
             ["Seleccionar"] + solicitantes
         )
 
-       # ENFERMEDAD
-enfermedad = st.selectbox(
-    "Enfermedad",
-    ["Seleccionar"] + list(protocolos.keys())
-)
+        enfermedad = st.selectbox(
+            "Enfermedad",
+            ["Seleccionar"] + list(protocolos.keys())
+        )
 
-# PROTOCOLO
-if enfermedad != "Seleccionar":
-    st.info(protocolos[enfermedad]["texto"])
+        if enfermedad != "Seleccionar":
+            st.info(protocolos[enfermedad]["texto"])
 
-# TRATAMIENTO (CORREGIDO + SIN ERRORES + ACTUALIZA BIEN)
-if enfermedad == "Seleccionar":
-    lista_tratamientos = ["Seleccionar"]
-else:
-    lista_tratamientos = ["Seleccionar"] + protocolos[enfermedad]["drugs"]
+        # 🔥 SOLUCIÓN DEFINITIVA
+        if enfermedad == "Seleccionar":
+            lista_tratamientos = ["Seleccionar"]
+        else:
+            lista_tratamientos = ["Seleccionar"] + protocolos[enfermedad]["drugs"]
 
-tratamiento = st.selectbox(
-    "Tratamiento",
-    lista_tratamientos,
-    key=f"tratamiento_{enfermedad}"
-)
+        tratamiento = st.selectbox(
+            "Tratamiento",
+            lista_tratamientos,
+            key=f"tratamiento_{enfermedad}"
+        )
 
-        # BOTÓN
         submitted = st.form_submit_button("Enviar solicitud")
 
-        # VALIDACIÓN
         if submitted:
 
             if not re.match(r"^AN\d{10}$", paciente_input):
@@ -226,22 +222,20 @@ tratamiento = st.selectbox(
                 save_data(st.session_state.requests)
 
                 st.success("Solicitud creada")
-                
-# -----------------------
-# EXPORTACIÓN CSV (ESTABLE)
-# -----------------------
-def generar_csv(data):
-    df = pd.DataFrame(data)
-    return df.to_csv(index=False).encode('utf-8')
 
+# -----------------------
+# EXPORTAR CSV
+# -----------------------
 if st.session_state.requests:
-    csv = generar_csv(st.session_state.requests)
+    df = pd.DataFrame(st.session_state.requests)
+
+    csv = df.to_csv(index=False).encode("utf-8")
 
     st.download_button(
-        label="Descargar Excel (CSV)",
-        data=csv,
-        file_name="solicitudes_dermai.csv",
-        mime="text/csv"
+        "Descargar Excel (CSV)",
+        csv,
+        "solicitudes.csv",
+        "text/csv"
     )
 
 # -----------------------
