@@ -168,11 +168,10 @@ if role == "Dermatólogo":
         else:
             lista_tratamientos = ["Seleccionar"]
 
-        tratamiento = st.selectbox(
-            "Tratamiento",
-            lista_tratamientos,
-            disabled=(enfermedad == "Seleccionar")
-        )
+tratamiento = st.selectbox(
+    "Tratamiento",
+    lista_tratamientos
+)
 
         submitted = st.form_submit_button("Enviar solicitud")
 
