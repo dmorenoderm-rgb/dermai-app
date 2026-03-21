@@ -213,6 +213,7 @@ if role == "Dermatólogo":
 
     if not re.match(r"^AN\d{10}$", paciente):
         st.error("Formato incorrecto")
+
     else:
         nueva = {
             "Paciente": paciente,
