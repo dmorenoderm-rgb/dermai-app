@@ -205,7 +205,7 @@ if st.session_state.requests:
         st.write(f"Paciente: {r['Paciente']} | {r['Enfermedad']}")
 
         # DIRECTOR
-        if role == "Director de Derma" and r["Estado Director"] == "Pendiente":
+        if role == "Director de Derma" and r.get("Estado Director", "Pendiente") == "Pendiente":
 
             col1, col2 = st.columns(2)
 
