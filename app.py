@@ -16,7 +16,49 @@ st.write("Gestión de Medicamentos de Alto Impacto en Dermatología HUVM")
 DB = "dermai.db"
 
 # =======================
-# DB SETUP
+# USUARIOS SIMPLES
+# =======================
+USUARIOS = {
+    "director": {"password": "123", "rol": "Director de Derma"},
+    "farmacia": {"password": "123", "rol": "Farmacia"},
+    "derma": {"password": "123", "rol": "Dermatólogo"},
+}
+
+# =======================
+# LOGIN
+# =======================
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+st.sidebar.subheader("Login")
+user = st.sidebar.text_input("Usuario")
+password = st.sidebar.text_input("Contraseña", type="password")
+
+if st.sidebar.button("Entrar"):
+    if user in USUARIOS and USUARIOS[user]["password"] == password:
+        st.session_state.user = {
+            "username": user,
+            "role": USUARIOS[user]["rol"]
+        }
+        st.rerun()
+    else:
+        st.sidebar.error("Credenciales incorrectas")
+
+if st.session_state.user is None:
+    st.stop()
+
+usuario = st.session_state.user["username"]
+role = st.session_state.user["role"]
+
+st.sidebar.success(f"Usuario: {usuario}")
+st.sidebar.info(f"Rol: {role}")
+
+if st.sidebar.button("Cerrar sesión"):
+    st.session_state.user = None
+    st.rerun()
+
+# =======================
+# DB
 # =======================
 def get_connection():
     return sqlite3.connect(DB, check_same_thread=False)
@@ -26,23 +68,11 @@ def init_db():
     conn = get_connection()
     c = conn.cursor()
 
-    # tabla usuarios
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        username TEXT UNIQUE,
-        password TEXT,
-        role TEXT
-    )
-    """)
-
-    # tabla solicitudes
     c.execute("""
     CREATE TABLE IF NOT EXISTS requests (
         id TEXT PRIMARY KEY,
         paciente TEXT,
         solicitante TEXT,
-        usuario_solicitud TEXT,
         enfermedad TEXT,
         tratamiento TEXT,
         estado_director TEXT,
@@ -56,72 +86,9 @@ def init_db():
     """)
 
     conn.commit()
-
-    # crear usuarios por defecto
-    users = [
-        ("director", hash_password("123"), "Director de Derma"),
-        ("farmacia", hash_password("123"), "Farmacia"),
-        ("derma", hash_password("123"), "Dermatólogo"),
-    ]
-
-    for u in users:
-        try:
-            c.execute("INSERT INTO users VALUES (?, ?, ?, ?)", (str(uuid.uuid4()), u[0], u[1], u[2]))
-        except:
-            pass
-
-    conn.commit()
     conn.close()
 
-
-def hash_password(p):
-    return hashlib.sha256(p.encode()).hexdigest()
-
-
 init_db()
-
-# =======================
-# LOGIN
-# =======================
-if "user" not in st.session_state:
-    st.session_state.user = None
-
-
-def login():
-    st.sidebar.subheader("Login")
-    user = st.sidebar.text_input("Usuario")
-    password = st.sidebar.text_input("Contraseña", type="password")
-
-    if st.sidebar.button("Entrar"):
-        conn = get_connection()
-        c = conn.cursor()
-        c.execute("SELECT username, password, role FROM users WHERE username=?", (user,))
-        result = c.fetchone()
-        conn.close()
-
-        if result and result[1] == hash_password(password):
-            st.session_state.user = {
-                "username": result[0],
-                "role": result[2]
-            }
-            st.rerun()
-        else:
-            st.sidebar.error("Credenciales incorrectas")
-
-
-if st.session_state.user is None:
-    login()
-    st.stop()
-
-usuario = st.session_state.user["username"]
-role = st.session_state.user["role"]
-
-st.sidebar.success(f"Usuario: {usuario}")
-st.sidebar.info(f"Rol: {role}")
-
-if st.sidebar.button("Cerrar sesión"):
-    st.session_state.user = None
-    st.rerun()
 
 # =======================
 # PROTOCOLOS
@@ -162,10 +129,9 @@ if role == "Dermatólogo":
             conn = get_connection()
             c = conn.cursor()
 
-            c.execute("INSERT INTO requests VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (
+            c.execute("INSERT INTO requests VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (
                 str(uuid.uuid4()),
                 paciente,
-                usuario,
                 usuario,
                 enfermedad,
                 tratamiento,
@@ -185,7 +151,22 @@ if role == "Dermatólogo":
             st.rerun()
 
 # =======================
-# LISTADO
+# FUNCION ESTADO GLOBAL
+# =======================
+def estado_global(r):
+    if r["estado_director"] == "Pendiente":
+        return "Pendiente Director"
+    elif r["estado_director"] == "No validado":
+        return "Rechazado Director"
+    elif r["estado_farmacia"] == "":
+        return "Pendiente Farmacia"
+    elif r["estado_farmacia"] == "Pendiente de dispensación":
+        return "En dispensación"
+    elif r["estado_farmacia"] == "No validado":
+        return "Rechazado Farmacia"
+
+# =======================
+# LISTADO LIMPIO
 # =======================
 st.subheader("Solicitudes")
 
@@ -193,7 +174,11 @@ conn = get_connection()
 df = pd.read_sql_query("SELECT * FROM requests ORDER BY fecha_solicitud DESC", conn)
 conn.close()
 
-st.dataframe(df, use_container_width=True)
+if not df.empty:
+    df["Estado"] = df.apply(estado_global, axis=1)
+
+    df_view = df[["paciente", "tratamiento", "Estado", "fecha_solicitud"]]
+    st.dataframe(df_view, use_container_width=True)
 
 # =======================
 # ACCIONES
@@ -207,7 +192,7 @@ for i, r in df.iterrows():
 
     # DIRECTOR
     if role == "Director de Derma" and r['estado_director'] == "Pendiente":
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
 
         if col1.button("Validar", key=f"val_{i}"):
             c.execute("UPDATE requests SET estado_director=?, fecha_director=?, director=? WHERE id=?", (
@@ -219,7 +204,7 @@ for i, r in df.iterrows():
             conn.commit()
             st.rerun()
 
-        if col2.button("No validar", key=f"noval_{i}"):
+        if col2.button("Rechazar", key=f"noval_{i}"):
             c.execute("UPDATE requests SET estado_director=?, fecha_director=?, director=? WHERE id=?", (
                 "No validado",
                 datetime.now().strftime("%d/%m/%Y %H:%M"),
@@ -228,6 +213,14 @@ for i, r in df.iterrows():
             ))
             conn.commit()
             st.rerun()
+
+        if col3.button("Eliminar", key=f"del_{i}"):
+            st.warning("Confirmar eliminación")
+            if st.button("Confirmar eliminación", key=f"confirm_{i}"):
+                c.execute("DELETE FROM requests WHERE id=?", (r['id'],))
+                conn.commit()
+                st.success("Registro eliminado")
+                st.rerun()
 
     # FARMACIA
     if role == "Farmacia" and r['estado_director'] == "Validado" and r['estado_farmacia'] == "":
@@ -254,15 +247,3 @@ for i, r in df.iterrows():
             st.rerun()
 
     conn.close()
-
-    # ESTADOS
-    if r['estado_director'] == "Pendiente":
-        st.warning("Pendiente Director")
-    elif r['estado_director'] == "No validado":
-        st.error("Rechazado Director")
-    elif r['estado_farmacia'] == "":
-        st.info("Pendiente Farmacia")
-    elif r['estado_farmacia'] == "Pendiente de dispensación":
-        st.success("Dispensación en curso")
-    elif r['estado_farmacia'] == "No validado":
-        st.error("Rechazado Farmacia")
