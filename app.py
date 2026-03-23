@@ -15,7 +15,7 @@ st.write("Gestión de Medicamentos de Alto Impacto en Dermatología HUVM")
 DB = "dermai.db"
 
 # =======================
-# USUARIOS
+# USUARIOS (LOGIN)
 # =======================
 USUARIOS = {
     "director": {"password": "123", "rol": "Director de Derma"},
@@ -55,6 +55,16 @@ st.sidebar.info(f"Rol: {role}")
 if st.sidebar.button("Cerrar sesión"):
     st.session_state.user = None
     st.rerun()
+
+# =======================
+# SOLICITANTES (DOCTORES)
+# =======================
+solicitantes = [
+    "Dra. Carrizosa","Dra. Conejo-Mir","Dr. de la Torre","Dra. Eiris",
+    "Dra. Fernández Orland","Dra. Ferrándiz","Dra. García Morales",
+    "Dr. Marcos","Dra. Ojeda","Dr. Ruiz de Casas","Dra. Ruz",
+    "Dra. Sánchez del Campo","Dr. Sánchez Leiro","Dra. Serrano",
+]
 
 # =======================
 # DB
@@ -115,14 +125,21 @@ if role == "Dermatólogo":
     st.subheader("Nueva solicitud")
 
     paciente = st.text_input("Paciente (AN + 10 dígitos)", value="AN")
+
+    solicitante = st.selectbox("Solicitante", ["Seleccionar"] + solicitantes)
+
     enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()))
     tratamiento = st.selectbox("Tratamiento", protocolos[enfermedad]["drugs"])
 
     if st.button("Enviar solicitud"):
         paciente = paciente.strip().upper()
 
-        if not re.fullmatch(r"AN\d{10}", paciente):
+        if solicitante == "Seleccionar":
+            st.error("Debe seleccionar un solicitante")
+
+        elif not re.fullmatch(r"AN\d{10}", paciente):
             st.error("Formato incorrecto")
+
         else:
             conn = get_connection()
             c = conn.cursor()
@@ -145,7 +162,7 @@ if role == "Dermatólogo":
             """, (
                 str(uuid.uuid4()),
                 paciente,
-                usuario,
+                solicitante,
                 enfermedad,
                 tratamiento,
                 "Pendiente",
@@ -190,7 +207,7 @@ conn.close()
 if not df.empty:
     df["Estado"] = df.apply(estado_global, axis=1)
 
-    df_view = df[["paciente", "tratamiento", "Estado", "fecha_solicitud"]]
+    df_view = df[["paciente", "solicitante", "tratamiento", "Estado", "fecha_solicitud"]]
     st.dataframe(df_view, use_container_width=True)
 
 # =======================
