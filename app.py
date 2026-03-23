@@ -1,30 +1,50 @@
 import streamlit as st
 import re
 import json
+import os
+import uuid
 from datetime import datetime
 import pandas as pd
 
+# =======================
+# CONFIGURACIÓN
+# =======================
 st.set_page_config(layout="wide")
 
 st.title("DerMAI PRO")
 st.write("Gestión de Medicamentos de Alto Impacto en Dermatología HUVM")
 
-# -----------------------
+# =======================
+# SEGURIDAD (ENV VARS)
+# =======================
+PASSWORD_DIRECTOR = os.getenv("PASS_DIRECTOR", "123")
+PASSWORD_FARMACIA = os.getenv("PASS_FARMACIA", "123")
+
+# =======================
 # LOGIN
-# -----------------------
+# =======================
 roles = ["Dermatólogo", "Director de Derma", "Farmacia"]
 role = st.sidebar.selectbox("Acceso", roles)
 
-if role in ["Director de Derma", "Farmacia"]:
+usuario = st.sidebar.text_input("Usuario")
+
+if role == "Director de Derma":
     password = st.sidebar.text_input("Contraseña", type="password")
-    if password != "123":
+    if password != PASSWORD_DIRECTOR:
         st.warning("Acceso restringido")
         st.stop()
 
-# -----------------------
+if role == "Farmacia":
+    password = st.sidebar.text_input("Contraseña", type="password")
+    if password != PASSWORD_FARMACIA:
+        st.warning("Acceso restringido")
+        st.stop()
+
+# =======================
 # DATOS
-# -----------------------
+# =======================
 FILE = "data.json"
+
 
 def load_data():
     try:
@@ -33,16 +53,21 @@ def load_data():
     except:
         return []
 
+
 def save_data(data):
-    with open(FILE, "w") as f:
-        json.dump(data, f)
+    try:
+        with open(FILE, "w") as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        st.error(f"Error guardando datos: {e}")
+
 
 if "requests" not in st.session_state:
     st.session_state.requests = load_data()
 
-# -----------------------
+# =======================
 # SOLICITANTES
-# -----------------------
+# =======================
 solicitantes = [
     "Dra. Carrizosa","Dra. Conejo-Mir","Dr. de la Torre","Dra. Eiris",
     "Dra. Fernández Orland","Dra. Ferrándiz","Dra. García Morales",
@@ -50,9 +75,9 @@ solicitantes = [
     "Dra. Sánchez del Campo","Dr. Sánchez Leiro","Dra. Serrano",
 ]
 
-# -----------------------
+# =======================
 # PROTOCOLOS
-# -----------------------
+# =======================
 protocolos = {
     "Psoriasis en placas": {
         "texto": "1º Adalimumab → 2º Ustekinumab → 3º Tildrakizumab → 4º Bimekizumab",
@@ -134,9 +159,23 @@ protocolos = {
     },
 }
 
-# -----------------------
+# =======================
+# DASHBOARD
+# =======================
+st.subheader("Resumen")
+
+if st.session_state.requests:
+    df_all = pd.DataFrame(st.session_state.requests)
+    pendientes_dir = len(df_all[df_all["Estado Director"] == "Pendiente"])
+    pendientes_farm = len(df_all[(df_all["Estado Director"] == "Validado") & (df_all["Estado Farmacia"] == "")])
+
+    col1, col2 = st.columns(2)
+    col1.metric("Pendientes Director", pendientes_dir)
+    col2.metric("Pendientes Farmacia", pendientes_farm)
+
+# =======================
 # FORMULARIO
-# -----------------------
+# =======================
 if role == "Dermatólogo":
 
     st.subheader("Nueva solicitud")
@@ -171,10 +210,15 @@ if role == "Dermatólogo":
         elif not re.fullmatch(r"AN\d{10}", paciente):
             st.error("Formato AN + 10 dígitos")
 
+        elif any(r["Paciente"] == paciente for r in st.session_state.requests):
+            st.warning("Paciente ya tiene solicitud activa")
+
         else:
             nueva = {
+                "id": str(uuid.uuid4()),
                 "Paciente": paciente,
                 "Solicitante": solicitante,
+                "Usuario solicitud": usuario,
                 "Enfermedad": enfermedad,
                 "Tratamiento": tratamiento,
                 "Estado Director": "Pendiente",
@@ -182,6 +226,8 @@ if role == "Dermatólogo":
                 "Fecha solicitud": datetime.now().strftime("%d/%m/%Y %H:%M"),
                 "Fecha Director": "",
                 "Fecha Farmacia": "",
+                "Director": "",
+                "Farmacia": "",
             }
 
             st.session_state.requests.insert(0, nueva)
@@ -189,50 +235,74 @@ if role == "Dermatólogo":
 
             st.success("Solicitud creada")
 
-# -----------------------
-# TABLA + VALIDACIONES
-# -----------------------
+# =======================
+# FILTROS
+# =======================
 st.subheader("Solicitudes")
+
+filtro_estado = st.selectbox("Filtrar por estado", ["Todos", "Pendiente", "Validado", "No validado"])
 
 if st.session_state.requests:
 
     df = pd.DataFrame(st.session_state.requests)
+
+    if filtro_estado != "Todos":
+        df = df[df["Estado Director"] == filtro_estado]
+
     st.dataframe(df, use_container_width=True)
 
     for i, r in enumerate(st.session_state.requests):
 
         st.write("---")
-        
+
+        st.write(f"Paciente: {r['Paciente']} | {r['Tratamiento']}")
+
         # DIRECTOR
-        if role == "Director de Derma" and r.get("Estado Director", "Pendiente") == "Pendiente":
+        if role == "Director de Derma" and r.get("Estado Director") == "Pendiente":
 
             col1, col2 = st.columns(2)
 
             if col1.button("Validar", key=f"val_{i}"):
                 r["Estado Director"] = "Validado"
                 r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                r["Director"] = usuario
                 save_data(st.session_state.requests)
                 st.rerun()
 
             if col2.button("No validar", key=f"noval_{i}"):
                 r["Estado Director"] = "No validado"
                 r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                r["Director"] = usuario
                 save_data(st.session_state.requests)
                 st.rerun()
 
         # FARMACIA
-        if role == "Farmacia" and r.get("Estado Director") == "Validado" and r.get("Estado Farmacia", "") == "":
+        if role == "Farmacia" and r.get("Estado Director") == "Validado" and r.get("Estado Farmacia") == "":
 
             col1, col2 = st.columns(2)
 
             if col1.button("Dispensar", key=f"disp_{i}"):
                 r["Estado Farmacia"] = "Pendiente de dispensación"
                 r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                r["Farmacia"] = usuario
                 save_data(st.session_state.requests)
                 st.rerun()
 
             if col2.button("Rechazar", key=f"rech_{i}"):
                 r["Estado Farmacia"] = "No validado"
                 r["Fecha Farmacia"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                r["Farmacia"] = usuario
                 save_data(st.session_state.requests)
                 st.rerun()
+
+        # ESTADO VISUAL
+        if r.get("Estado Director") == "Pendiente":
+            st.warning("Pendiente validación Director")
+        elif r.get("Estado Director") == "No validado":
+            st.error("Rechazado por Director")
+        elif r.get("Estado Farmacia") == "":
+            st.info("Pendiente Farmacia")
+        elif r.get("Estado Farmacia") == "Pendiente de dispensación":
+            st.success("En proceso de dispensación")
+        elif r.get("Estado Farmacia") == "No validado":
+            st.error("Rechazado por Farmacia")
