@@ -220,6 +220,15 @@ if st.session_state.requests:
                 save_data(st.session_state.requests)
                 st.rerun()
 
+        # ELIMINAR (solo Director)
+        if role == "Director de Derma":
+
+            if st.button("🗑️ Eliminar", key=f"del_{i}"):
+
+                st.session_state.requests.pop(i)
+                save_data(st.session_state.requests)
+                st.rerun()
+
         # FARMACIA
         if role == "Farmacia" and r.get("Estado Director") == "Validado" and r.get("Estado Farmacia", "") == "":
 
