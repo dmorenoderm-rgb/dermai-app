@@ -216,11 +216,11 @@ if st.session_state.requests:
                     save_data(st.session_state.requests)
                     st.rerun()
 
-            if col2.button("No validar", key=f"noval_{i}"):
-            r["Estado Director"] = "No validado"
-            r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
-            save_data(st.session_state.requests)
-            st.rerun()
+                if col2.button("No validar", key=f"noval_{i}"):
+                    r["Estado Director"] = "No validado"
+                    r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    save_data(st.session_state.requests)
+                    st.rerun()
 
     # 🗑️ ELIMINAR SIEMPRE DISPONIBLE (más lógico clínicamente)
     if col3.button("Eliminar", key=f"del_{i}"):
