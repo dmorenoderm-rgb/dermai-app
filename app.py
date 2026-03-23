@@ -223,7 +223,7 @@ if st.session_state.requests:
                     st.rerun()
 
     # 🗑️ ELIMINAR SIEMPRE DISPONIBLE (más lógico clínicamente)
-    if col3.button("Eliminar", key=f"del_{i}"):
+    if st.button("Eliminar", key=f"del_{i}"):
         st.session_state[f"confirm_delete_{i}"] = True
 
     if st.session_state.get(f"confirm_delete_{i}", False):
