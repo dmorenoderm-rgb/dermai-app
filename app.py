@@ -1,6 +1,5 @@
 import streamlit as st
 import sqlite3
-import hashlib
 import uuid
 from datetime import datetime
 import pandas as pd
@@ -16,7 +15,7 @@ st.write("Gestión de Medicamentos de Alto Impacto en Dermatología HUVM")
 DB = "dermai.db"
 
 # =======================
-# USUARIOS SIMPLES
+# USUARIOS
 # =======================
 USUARIOS = {
     "director": {"password": "123", "rol": "Director de Derma"},
@@ -62,7 +61,6 @@ if st.sidebar.button("Cerrar sesión"):
 # =======================
 def get_connection():
     return sqlite3.connect(DB, check_same_thread=False)
-
 
 def init_db():
     conn = get_connection()
@@ -129,7 +127,22 @@ if role == "Dermatólogo":
             conn = get_connection()
             c = conn.cursor()
 
-            c.execute("INSERT INTO requests VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (
+            c.execute("""
+            INSERT INTO requests (
+                id,
+                paciente,
+                solicitante,
+                enfermedad,
+                tratamiento,
+                estado_director,
+                estado_farmacia,
+                fecha_solicitud,
+                fecha_director,
+                fecha_farmacia,
+                director,
+                farmacia
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
                 str(uuid.uuid4()),
                 paciente,
                 usuario,
@@ -151,7 +164,7 @@ if role == "Dermatólogo":
             st.rerun()
 
 # =======================
-# FUNCION ESTADO GLOBAL
+# ESTADO GLOBAL
 # =======================
 def estado_global(r):
     if r["estado_director"] == "Pendiente":
@@ -166,7 +179,7 @@ def estado_global(r):
         return "Rechazado Farmacia"
 
 # =======================
-# LISTADO LIMPIO
+# LISTADO
 # =======================
 st.subheader("Solicitudes")
 
@@ -191,58 +204,46 @@ for i, r in df.iterrows():
     c = conn.cursor()
 
     # DIRECTOR
-    if role == "Director de Derma" and r['estado_director'] == "Pendiente":
+    if role == "Director de Derma" and r["estado_director"] == "Pendiente":
         col1, col2, col3 = st.columns(3)
 
         if col1.button("Validar", key=f"val_{i}"):
-            c.execute("UPDATE requests SET estado_director=?, fecha_director=?, director=? WHERE id=?", (
-                "Validado",
-                datetime.now().strftime("%d/%m/%Y %H:%M"),
-                usuario,
-                r['id']
-            ))
+            c.execute("""
+            UPDATE requests SET estado_director=?, fecha_director=?, director=? WHERE id=?
+            """, ("Validado", datetime.now().strftime("%d/%m/%Y %H:%M"), usuario, r["id"]))
             conn.commit()
             st.rerun()
 
         if col2.button("Rechazar", key=f"noval_{i}"):
-            c.execute("UPDATE requests SET estado_director=?, fecha_director=?, director=? WHERE id=?", (
-                "No validado",
-                datetime.now().strftime("%d/%m/%Y %H:%M"),
-                usuario,
-                r['id']
-            ))
+            c.execute("""
+            UPDATE requests SET estado_director=?, fecha_director=?, director=? WHERE id=?
+            """, ("No validado", datetime.now().strftime("%d/%m/%Y %H:%M"), usuario, r["id"]))
             conn.commit()
             st.rerun()
 
         if col3.button("Eliminar", key=f"del_{i}"):
-            st.warning("Confirmar eliminación")
-            if st.button("Confirmar eliminación", key=f"confirm_{i}"):
-                c.execute("DELETE FROM requests WHERE id=?", (r['id'],))
+            st.warning("⚠️ Confirmar eliminación")
+            if st.button("Confirmar", key=f"confirm_{i}"):
+                c.execute("DELETE FROM requests WHERE id=?", (r["id"],))
                 conn.commit()
                 st.success("Registro eliminado")
                 st.rerun()
 
     # FARMACIA
-    if role == "Farmacia" and r['estado_director'] == "Validado" and r['estado_farmacia'] == "":
+    if role == "Farmacia" and r["estado_director"] == "Validado" and r["estado_farmacia"] == "":
         col1, col2 = st.columns(2)
 
         if col1.button("Dispensar", key=f"disp_{i}"):
-            c.execute("UPDATE requests SET estado_farmacia=?, fecha_farmacia=?, farmacia=? WHERE id=?", (
-                "Pendiente de dispensación",
-                datetime.now().strftime("%d/%m/%Y %H:%M"),
-                usuario,
-                r['id']
-            ))
+            c.execute("""
+            UPDATE requests SET estado_farmacia=?, fecha_farmacia=?, farmacia=? WHERE id=?
+            """, ("Pendiente de dispensación", datetime.now().strftime("%d/%m/%Y %H:%M"), usuario, r["id"]))
             conn.commit()
             st.rerun()
 
         if col2.button("Rechazar", key=f"rech_{i}"):
-            c.execute("UPDATE requests SET estado_farmacia=?, fecha_farmacia=?, farmacia=? WHERE id=?", (
-                "No validado",
-                datetime.now().strftime("%d/%m/%Y %H:%M"),
-                usuario,
-                r['id']
-            ))
+            c.execute("""
+            UPDATE requests SET estado_farmacia=?, fecha_farmacia=?, farmacia=? WHERE id=?
+            """, ("No validado", datetime.now().strftime("%d/%m/%Y %H:%M"), usuario, r["id"]))
             conn.commit()
             st.rerun()
 
