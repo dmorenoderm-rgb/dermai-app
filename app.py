@@ -204,42 +204,22 @@ if st.session_state.requests:
         st.write("---")
         
         # DIRECTOR
-        if role == "Director de Derma":
+        if role == "Director de Derma" and r.get("Estado Director", "Pendiente") == "Pendiente":
 
-            col1, col2, col3 = st.columns(3)
+            col1, col2 = st.columns(2)
 
-            if r.get("Estado Director", "Pendiente") == "Pendiente":
+            if col1.button("Validar", key=f"val_{i}"):
+                r["Estado Director"] = "Validado"
+                r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                save_data(st.session_state.requests)
+                st.rerun()
 
-                if col1.button("Validar", key=f"val_{i}"):
-                    r["Estado Director"] = "Validado"
-                    r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
-                    save_data(st.session_state.requests)
-                    st.rerun()
+            if col2.button("No validar", key=f"noval_{i}"):
+                r["Estado Director"] = "No validado"
+                r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                save_data(st.session_state.requests)
+                st.rerun()
 
-                if col2.button("No validar", key=f"noval_{i}"):
-                    r["Estado Director"] = "No validado"
-                    r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
-                    save_data(st.session_state.requests)
-                    st.rerun()
-
-    # 🗑️ ELIMINAR SIEMPRE DISPONIBLE (más lógico clínicamente)
-    if st.button("Eliminar", key=f"del_{i}"):
-        st.session_state[f"confirm_delete_{i}"] = True
-
-    if st.session_state.get(f"confirm_delete_{i}", False):
-        st.warning("¿Confirmar eliminación?")
-
-        colc1, colc2 = st.columns(2)
-
-        if colc1.button("Sí, eliminar", key=f"confirm_yes_{i}"):
-            st.session_state.requests.pop(i)
-            save_data(st.session_state.requests)
-            st.session_state[f"confirm_delete_{i}"] = False
-            st.rerun()
-
-        if colc2.button("Cancelar", key=f"confirm_no_{i}"):
-            st.session_state[f"confirm_delete_{i}"] = False                
-       
         # FARMACIA
         if role == "Farmacia" and r.get("Estado Director") == "Validado" and r.get("Estado Farmacia", "") == "":
 
