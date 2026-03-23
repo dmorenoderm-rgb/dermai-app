@@ -23,22 +23,21 @@ PASSWORD_FARMACIA = os.getenv("PASS_FARMACIA", "123")
 # =======================
 # LOGIN
 # =======================
-roles = ["Dermatólogo", "Director de Derma", "Farmacia"]
-role = st.sidebar.selectbox("Acceso", roles)
+USUARIOS = {
+    "director": {"password": "123", "rol": "Director de Derma"},
+    "farmacia": {"password": "123", "rol": "Farmacia"},
+    "derma": {"password": "123", "rol": "Dermatólogo"},
+}
 
-usuario = st.sidebar.text_input("Usuario")
+user = st.sidebar.text_input("Usuario")
+password = st.sidebar.text_input("Contraseña", type="password")
 
-if role == "Director de Derma":
-    password = st.sidebar.text_input("Contraseña", type="password")
-    if password != PASSWORD_DIRECTOR:
-        st.warning("Acceso restringido")
-        st.stop()
+if user not in USUARIOS or USUARIOS[user]["password"] != password:
+    st.warning("Credenciales incorrectas")
+    st.stop()
 
-if role == "Farmacia":
-    password = st.sidebar.text_input("Contraseña", type="password")
-    if password != PASSWORD_FARMACIA:
-        st.warning("Acceso restringido")
-        st.stop()
+role = USUARIOS[user]["rol"]
+usuario = user
 
 # =======================
 # DATOS
