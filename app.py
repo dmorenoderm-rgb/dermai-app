@@ -221,13 +221,13 @@ if st.session_state.requests:
                 st.rerun()
 
         # 🗑️ ELIMINAR CON CONFIRMACIÓN
-        if col3.button("Eliminar", key=f"del_{i}"):
-        st.session_state[f"confirm_delete_{i}"] = True
+            if col3.button("Eliminar", key=f"del_{i}"):
+            st.session_state[f"confirm_delete_{i}"] = True
 
-        if st.session_state.get(f"confirm_delete_{i}", False):
-        st.warning("¿Confirmar eliminación?")
+            if st.session_state.get(f"confirm_delete_{i}", False):
+            st.warning("¿Confirmar eliminación?")
 
-            colc1, colc2 = st.columns(2)
+                colc1, colc2 = st.columns(2)
 
             if colc1.button("Sí, eliminar", key=f"confirm_yes_{i}"):
             st.session_state.requests.pop(i)
