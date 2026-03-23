@@ -202,8 +202,7 @@ if st.session_state.requests:
     for i, r in enumerate(st.session_state.requests):
 
         st.write("---")
-        st.write(f"Paciente: {r['Paciente']} | {r['Enfermedad']}")
-
+        
         # DIRECTOR
         if role == "Director de Derma" and r.get("Estado Director", "Pendiente") == "Pendiente":
 
