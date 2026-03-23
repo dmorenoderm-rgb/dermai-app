@@ -21,7 +21,7 @@ DB = "dermai.db"
 USUARIOS = {
     "director": {"password": "123", "rol": "Director de Derma"},
     "farmacia": {"password": "123", "rol": "Farmacia"},
-    "derma": {"password": "123", "rol": "Dermatólogo"},
+    "Dra. Eirís": {"password": "123", "rol": "Dermatólogo"},
 }
 
 # =======================
