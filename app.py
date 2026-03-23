@@ -206,7 +206,7 @@ if st.session_state.requests:
         # DIRECTOR
         if role == "Director de Derma" and r.get("Estado Director", "Pendiente") == "Pendiente":
 
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
 
             if col1.button("Validar", key=f"val_{i}"):
                 r["Estado Director"] = "Validado"
