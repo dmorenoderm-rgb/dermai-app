@@ -211,10 +211,10 @@ if st.session_state.requests:
             if r.get("Estado Director", "Pendiente") == "Pendiente":
 
                 if col1.button("Validar", key=f"val_{i}"):
-                r["Estado Director"] = "Validado"
-                r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
-                save_data(st.session_state.requests)
-                st.rerun()
+                    r["Estado Director"] = "Validado"
+                    r["Fecha Director"] = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    save_data(st.session_state.requests)
+                    st.rerun()
 
             if col2.button("No validar", key=f"noval_{i}"):
             r["Estado Director"] = "No validado"
