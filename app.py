@@ -5,8 +5,12 @@ from datetime import datetime
 import pandas as pd
 import re
 
+# =======================
+# CONFIG
+# =======================
 st.set_page_config(layout="wide")
 st.title("DerMAI PRO")
+st.write("Gestión de Medicamentos de Alto Impacto en Dermatología HUVM")
 
 DB = "dermai.db"
 
@@ -85,16 +89,86 @@ solicitantes = [
 ]
 
 # =======================
-# PROTOCOLOS
+# PROTOCOLOS COMPLETOS
 # =======================
 protocolos = {
     "Psoriasis en placas": {
-        "texto": "Secuencia biológicos",
-        "drugs": ["Adalimumab","Ustekinumab","Bimekizumab"],
+        "texto": "1º Adalimumab → 2º Ustekinumab → 3º Tildrakizumab → 4º Bimekizumab",
+        "drugs": [
+            "Adalimumab 40 mg cada 2 semanas",
+            "Ustekinumab 45 mg cada 12 semanas",
+            "Ustekinumab 90 mg cada 12 semanas",
+            "Secukinumab 300 mg cada 4 semanas",
+            "Ixekizumab 80 mg cada 4 semanas",
+            "Guselkumab 100 mg cada 8 semanas",
+            "Risankizumab 150 mg cada 12 semanas",
+            "Tildrakizumab 100 mg cada 12 semanas",
+            "Bimekizumab 320 mg cada 8 semanas",
+        ],
     },
     "Dermatitis atópica": {
-        "texto": "Biológicos y JAK",
-        "drugs": ["Dupilumab","Tralokinumab","Upadacitinib"],
+        "texto": "1º Dupilumab → 2º Tralokinumab → 3º JAK",
+        "drugs": [
+            "Dupilumab 300 mg cada 2 semanas",
+            "Tralokinumab 300 mg cada 2 semanas",
+            "Tralokinumab 300 mg cada 4 semanas",
+            "Lebrikizumab 250 mg cada 2 semanas",
+            "Lebrikizumab 250 mg cada 4 semanas",
+            "Upadacitinib 15 mg",
+            "Upadacitinib 30 mg",
+            "Baricitinib 2 mg",
+            "Baricitinib 4 mg",
+            "Abrocitinib 100 mg",
+            "Abrocitinib 200 mg",
+        ],
+    },
+    "Hidradenitis supurativa": {
+        "texto": "Adalimumab primera línea",
+        "drugs": [
+            "Adalimumab semanal",
+            "Secukinumab 300 mg cada 4 semanas",
+            "Bimekizumab 320 mg cada 4 semanas",
+        ],
+    },
+    "Urticaria crónica espontánea": {
+        "texto": "Omalizumab",
+        "drugs": ["Omalizumab 300 mg cada 4 semanas"],
+    },
+    "Alopecia areata": {
+        "texto": "JAK",
+        "drugs": [
+            "Baricitinib 2 mg",
+            "Baricitinib 4 mg",
+            "Ritlecitinib 50 mg",
+        ],
+    },
+    "Vitíligo": {
+        "texto": "Ruxolitinib tópico",
+        "drugs": ["Ruxolitinib crema 1,5%"],
+    },
+    "Melanoma": {
+        "texto": "Inmunoterapia",
+        "drugs": [
+            "Nivolumab 240 mg cada 2 semanas",
+            "Nivolumab 480 mg cada 4 semanas",
+            "Pembrolizumab 200 mg cada 3 semanas",
+            "Pembrolizumab 400 mg cada 6 semanas",
+        ],
+    },
+    "Carcinoma basocelular": {
+        "texto": "Hedgehog",
+        "drugs": [
+            "Vismodegib 150 mg diario",
+            "Sonidegib 200 mg diario",
+        ],
+    },
+    "Carcinoma escamoso cutáneo": {
+        "texto": "Anti-PD1",
+        "drugs": [
+            "Cemiplimab 350 mg cada 3 semanas",
+            "Pembrolizumab 200 mg cada 3 semanas",
+            "Pembrolizumab 400 mg cada 6 semanas",
+        ],
     },
 }
 
@@ -116,14 +190,11 @@ if role == "Dermatólogo":
     if st.button("Enviar solicitud"):
 
         if solicitante == "Seleccionar":
-            st.error("Selecciona solicitante")
-
+            st.error("Seleccione solicitante")
         elif enfermedad == "Seleccionar":
-            st.error("Selecciona enfermedad")
-
+            st.error("Seleccione enfermedad")
         elif not re.fullmatch(r"AN\d{10}", paciente):
             st.error("Formato incorrecto")
-
         else:
             conn = get_conn()
             c = conn.cursor()
@@ -150,14 +221,14 @@ if role == "Dermatólogo":
 
             conn.commit()
             conn.close()
-            st.success("OK")
+            st.success("Solicitud creada")
             st.rerun()
 
 # =======================
 # LISTADO
 # =======================
 conn = get_conn()
-df = pd.read_sql_query("SELECT * FROM requests", conn)
+df = pd.read_sql_query("SELECT * FROM requests ORDER BY fecha_solicitud DESC", conn)
 conn.close()
 
 if not df.empty:
