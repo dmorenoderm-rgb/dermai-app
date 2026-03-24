@@ -57,6 +57,16 @@ if st.sidebar.button("Cerrar sesión"):
     st.rerun()
 
 # =======================
+# SOLICITANTES
+# =======================
+solicitantes = [
+    "Dra. Carrizosa","Dra. Conejo-Mir","Dr. de la Torre","Dra. Eiris",
+    "Dra. Fernández Orland","Dra. Ferrándiz","Dra. García Morales",
+    "Dr. Marcos","Dra. Ojeda","Dr. Ruiz de Casas","Dra. Ruz",
+    "Dra. Sánchez del Campo","Dr. Sánchez Leiro","Dra. Serrano",
+]
+
+# =======================
 # DB
 # =======================
 def get_connection():
@@ -117,19 +127,24 @@ if role == "Dermatólogo":
     st.subheader("Nueva solicitud")
 
     paciente = st.text_input("Paciente (AN + 10 dígitos)", value="AN")
+    solicitante = st.selectbox("Solicitante", ["Seleccionar"] + solicitantes)
     enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()))
     tratamiento = st.selectbox("Tratamiento", protocolos[enfermedad]["drugs"])
 
     if st.button("Enviar solicitud"):
         paciente = paciente.strip().upper()
 
-        if not re.fullmatch(r"AN\d{10}", paciente):
+        if solicitante == "Seleccionar":
+            st.error("Debe seleccionar un solicitante")
+
+        elif not re.fullmatch(r"AN\d{10}", paciente):
             st.error("Formato incorrecto")
+
         else:
             conn = get_connection()
             c = conn.cursor()
 
-            c.execute("""
+            query = """
             INSERT INTO requests (
                 id, paciente, solicitante, enfermedad, tratamiento,
                 estado_director, estado_farmacia,
@@ -137,10 +152,12 @@ if role == "Dermatólogo":
                 fecha_solicitud, fecha_director, fecha_farmacia,
                 director, farmacia
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
+            """
+
+            valores = (
                 str(uuid.uuid4()),
                 paciente,
-                usuario,
+                solicitante,
                 enfermedad,
                 tratamiento,
                 "Pendiente",
@@ -152,7 +169,9 @@ if role == "Dermatólogo":
                 "",
                 "",
                 ""
-            ))
+            )
+
+            c.execute(query, valores)
 
             conn.commit()
             conn.close()
@@ -186,8 +205,7 @@ conn.close()
 
 if not df.empty:
     df["Estado"] = df.apply(estado_global, axis=1)
-    df_view = df[["paciente", "tratamiento", "Estado", "fecha_solicitud"]]
-    st.dataframe(df_view, use_container_width=True)
+    st.dataframe(df[["paciente", "solicitante", "tratamiento", "Estado", "fecha_solicitud"]], use_container_width=True)
 
 # =======================
 # ACCIONES
@@ -201,6 +219,7 @@ for i, r in df.iterrows():
 
     # DIRECTOR
     if role == "Director de Derma" and r["estado_director"] == "Pendiente":
+
         comentario = st.text_input("Motivo (opcional, máx 100)", key=f"dir_{i}", max_chars=100)
 
         col1, col2, col3 = st.columns(3)
@@ -226,6 +245,7 @@ for i, r in df.iterrows():
 
     # FARMACIA
     if role == "Farmacia" and r["estado_director"] == "Validado" and r["estado_farmacia"] == "":
+
         comentario = st.text_input("Motivo (opcional, máx 100)", key=f"far_{i}", max_chars=100)
 
         col1, col2 = st.columns(2)
