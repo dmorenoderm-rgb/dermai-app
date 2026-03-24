@@ -67,6 +67,43 @@ solicitantes = [
 ]
 
 # =======================
+# PROTOCOLOS
+# =======================
+protocolos = {
+    "Psoriasis en placas": {
+        "texto": "1º Adalimumab → 2º Ustekinumab → 3º Tildrakizumab → 4º Bimekizumab",
+        "drugs": [
+            "Adalimumab 40 mg/2 semanas",
+            "Ustekinumab 45 mg/12 semanas",
+            "Ustekinumab 90 mg/12 semanas",
+            "Secukinumab 300 mg/4 semanas",
+            "Ixekizumab 80 mg/4 semanas",
+            "Guselkumab 100 mg/8 semanas",
+            "Risankizumab 150 mg/12 semanas",
+            "Tildrakizumab 100 mg/12 semanas",
+            "Bimekizumab 320 mg/8 semanas",
+        ],
+    },
+    "Dermatitis atópica": {
+        "texto": "1º Dupilumab → 2º Tralokinumab → 3º JAK",
+        "drugs": [
+            "Dupilumab 300 mg/2 semanas",
+            "Tralokinumab 300 mg/2 semanas",
+            "Upadacitinib 15 mg",
+            "Baricitinib 4 mg",
+        ],
+    },
+    "Hidradenitis supurativa": {
+        "texto": "Adalimumab primera línea",
+        "drugs": [
+            "Adalimumab semanal",
+            "Secukinumab 300 mg",
+            "Bimekizumab 320 mg",
+        ],
+    },
+}
+
+# =======================
 # DB
 # =======================
 def get_connection():
@@ -101,26 +138,6 @@ def init_db():
 init_db()
 
 # =======================
-# PROTOCOLOS
-# =======================
-protocolos = {
-    "Psoriasis en placas": {
-        "texto": "1º Adalimumab → 2º Ustekinumab → 3º Tildrakizumab → 4º Bimekizumab",
-        "drugs": [
-            "Adalimumab 40 mg/2 semanas",
-            "Ustekinumab 45 mg/12 semanas",
-            "Ustekinumab 90 mg/12 semanas",
-            "Secukinumab 300 mg/4 semanas",
-            "Ixekizumab 80 mg/4 semanas",
-            "Guselkumab 100 mg/8 semanas",
-            "Risankizumab 150 mg/12 semanas",
-            "Tildrakizumab 100 mg/12 semanas",
-            "Bimekizumab 320 mg/8 semanas",
-        ],
-    }
-}
-
-# =======================
 # NUEVA SOLICITUD
 # =======================
 if role == "Dermatólogo":
@@ -128,23 +145,28 @@ if role == "Dermatólogo":
 
     paciente = st.text_input("Paciente (AN + 10 dígitos)", value="AN")
     solicitante = st.selectbox("Solicitante", ["Seleccionar"] + solicitantes)
-    enfermedad = st.selectbox("Enfermedad", list(protocolos.keys()))
-    tratamiento = st.selectbox("Tratamiento", protocolos[enfermedad]["drugs"])
+    enfermedad = st.selectbox("Enfermedad", ["Seleccionar"] + list(protocolos.keys()))
+
+    if enfermedad != "Seleccionar":
+        st.info(protocolos[enfermedad]["texto"])
+        tratamiento = st.selectbox("Tratamiento", protocolos[enfermedad]["drugs"])
+    else:
+        tratamiento = None
 
     if st.button("Enviar solicitud"):
         paciente = paciente.strip().upper()
 
         if solicitante == "Seleccionar":
-            st.error("Debe seleccionar un solicitante")
-
+            st.error("Seleccione solicitante")
+        elif enfermedad == "Seleccionar":
+            st.error("Seleccione enfermedad")
         elif not re.fullmatch(r"AN\d{10}", paciente):
             st.error("Formato incorrecto")
-
         else:
             conn = get_connection()
             c = conn.cursor()
 
-            query = """
+            c.execute("""
             INSERT INTO requests (
                 id, paciente, solicitante, enfermedad, tratamiento,
                 estado_director, estado_farmacia,
@@ -152,9 +174,7 @@ if role == "Dermatólogo":
                 fecha_solicitud, fecha_director, fecha_farmacia,
                 director, farmacia
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """
-
-            valores = (
+            """, (
                 str(uuid.uuid4()),
                 paciente,
                 solicitante,
@@ -169,9 +189,7 @@ if role == "Dermatólogo":
                 "",
                 "",
                 ""
-            )
-
-            c.execute(query, valores)
+            ))
 
             conn.commit()
             conn.close()
@@ -184,15 +202,15 @@ if role == "Dermatólogo":
 # =======================
 def estado_global(r):
     if r["estado_director"] == "Pendiente":
-        return "Pendiente Director"
+        return "🟡 Pendiente Director"
     elif r["estado_director"] == "No validado":
-        return "No validado Director"
+        return "🔴 No validado Director"
     elif r["estado_farmacia"] == "":
-        return "Pendiente Farmacia"
+        return "🟠 Pendiente Farmacia"
     elif r["estado_farmacia"] == "Pendiente de dispensación":
-        return "En dispensación"
+        return "🟢 En dispensación"
     elif r["estado_farmacia"] == "No validado":
-        return "No validado Farmacia"
+        return "🔴 No validado Farmacia"
 
 # =======================
 # LISTADO
@@ -205,14 +223,17 @@ conn.close()
 
 if not df.empty:
     df["Estado"] = df.apply(estado_global, axis=1)
-    st.dataframe(df[["paciente", "solicitante", "tratamiento", "Estado", "fecha_solicitud"]], use_container_width=True)
+    st.dataframe(df[["paciente", "solicitante", "enfermedad", "tratamiento", "Estado"]], use_container_width=True)
 
 # =======================
 # ACCIONES
 # =======================
 for i, r in df.iterrows():
     st.write("---")
-    st.write(f"🧾 {r['paciente']} | {r['tratamiento']} | {estado_global(r)}")
+
+    # 🔵 RESALTADO VISUAL
+    st.markdown(f"### 🧾 {r['paciente']} — {r['tratamiento']}")
+    st.markdown(f"**Estado:** {estado_global(r)}")
 
     conn = get_connection()
     c = conn.cursor()
@@ -220,7 +241,7 @@ for i, r in df.iterrows():
     # DIRECTOR
     if role == "Director de Derma" and r["estado_director"] == "Pendiente":
 
-        comentario = st.text_input("Motivo (opcional, máx 100)", key=f"dir_{i}", max_chars=100)
+        comentario = st.text_input("Motivo (máx 100)", key=f"dir_{i}", max_chars=100)
 
         col1, col2, col3 = st.columns(3)
 
@@ -245,8 +266,7 @@ for i, r in df.iterrows():
 
     # FARMACIA
     if role == "Farmacia" and r["estado_director"] == "Validado" and r["estado_farmacia"] == "":
-
-        comentario = st.text_input("Motivo (opcional, máx 100)", key=f"far_{i}", max_chars=100)
+        comentario = st.text_input("Motivo (máx 100)", key=f"far_{i}", max_chars=100)
 
         col1, col2 = st.columns(2)
 
